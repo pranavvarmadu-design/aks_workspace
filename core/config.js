@@ -30,7 +30,7 @@ export const DEFAULT_PROFILE = {
     'plant anatomy', 'pollination biology', 'floral biology', 'plant reproductive biology',
     // Her core skills
     'ultrastructure', 'plant cell biology', 'plant developmental biology', 'microscopy', 'pollination ecology',
-    'plant ecology', 'biodiversity conservation', 'plant biochemistry', 'metabolite profiling', 'hplc', 'gc-ms', 'icp-ms',
+    'plant ecology', 'plant pollination', 'floral ecology', 'bee pollination', 'biodiversity conservation', 'plant biochemistry', 'metabolite profiling', 'hplc', 'gc-ms', 'icp-ms',
   ],
   // Any-of role terms used for university searches.
   academicRoles: ['postdoctoral', 'postdoc', 'postdoctoral fellow', 'postdoctoral research associate', 'postdoctoral scholar'],
@@ -88,10 +88,10 @@ export const DEFAULT_SOURCES = {
   // jobs.ac.uk: UK universities and institutes (Oxford, Cambridge, John Innes, Kew), some Europe.
   jobsAcUk: [
     'plant postdoctoral', 'plant research associate', 'botany', 'pollination', 'plant science research fellow',
-    'plant cell biology', 'plant ecology', 'biodiversity conservation', 'microscopy plant', 'plant metabolites', 'plant biochemistry',
+    'plant cell biology', 'plant ecology', 'floral ecology', 'bee ecology', 'biodiversity conservation', 'microscopy plant', 'plant metabolites', 'plant biochemistry',
   ],
   // Science Careers (journal Science): international, keyword RSS. Market comes from each posting's location.
-  scienceCareers: ['postdoctoral plant', 'postdoc botany', 'pollination', 'plant biology postdoctoral', 'plant ecology postdoctoral', 'plant cell biology', 'plant biochemistry postdoctoral'],
+  scienceCareers: ['postdoctoral plant', 'postdoc botany', 'pollination', 'plant biology postdoctoral', 'plant ecology postdoctoral', 'floral ecology', 'bee pollination', 'plant cell biology', 'plant biochemistry postdoctoral'],
   // University career sites that run on Workday expose a JSON search endpoint.
   workday: [
     { name: 'NUS', host: 'nus.wd3.myworkdayjobs.com', tenant: 'nus', site: 'NUS', market: 'SG', university: true },

@@ -18,6 +18,11 @@ export const CORE_SKILLS = [
   ['Microscopy', /microscop/i],
   ['Pollination', /pollinat/i],
   ['Ecology', /ecolog/i],
+  // Her closest fields: counted on top of Pollination and Ecology, so they rank higher still.
+  ['Plant pollination', /plant[- ]pollinat|plant[-–\s]+pollinator|pollination (biology|of (crops|plants|flowers))|crop pollinat/i],
+  ['Floral ecology', /floral (ecolog|biolog|trait|reward|resource|visitor|display)|flower ecolog|\bnectar/i],
+  ['Plant ecology', /plant (community |population |reproductive )?ecolog|vegetation ecolog/i],
+  ['Bee pollination', /\b(bees?|bumble ?bees?|honey ?bees?|apis|apidae)\b/i],
   ['Biodiversity conservation', /biodiversity|conservation (biolog|science|ecolog|genetics)|plant conservation|species conservation/i],
   ['HPLC', /\bu?hplc\b|\buplc\b|liquid chromatograph/i],
   ['Plant biochemistry', /plant biochem|phytochem/i],

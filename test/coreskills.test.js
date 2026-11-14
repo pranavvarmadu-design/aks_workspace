@@ -11,7 +11,10 @@ test('core skills are found in titles and descriptions', () => {
   assert.deepEqual(names({ title: 'Postdoc in Plant Cell Biology', description: 'TEM ultrastructure and confocal microscopy' }), ['Ultrastructure', 'Cell biology', 'Microscopy']);
   assert.deepEqual(names({ title: 'Research Associate', description: 'HPLC, GC-MS and ICP-MS profiling of metabolites in plant extracts' }), ['HPLC', 'ICP-MS', 'GC-MS', 'Metabolite profiling']);
   assert.deepEqual(names({ title: 'Postdoc in pollination ecology and biodiversity conservation' }), ['Pollination', 'Ecology', 'Biodiversity conservation']);
-  assert.deepEqual(names({ title: 'Postdoc in floral development', description: 'phytochemistry of nectar' }), ['Developmental biology', 'Plant biochemistry']);
+  assert.deepEqual(names({ title: 'Postdoc: Bee Ecology And Conservation In Farmland' }), ['Ecology', 'Bee pollination']);
+  assert.deepEqual(names({ title: 'Postdoc in plant-pollinator interactions', description: 'floral traits and nectar rewards; plant community ecology' }),
+    ['Pollination', 'Ecology', 'Plant pollination', 'Floral ecology', 'Plant ecology']);
+  assert.deepEqual(names({ title: 'Postdoc in floral development', description: 'phytochemistry of nectar' }), ['Developmental biology', 'Floral ecology', 'Plant biochemistry']);
 });
 
 test('core-skill listings rank above plain plant listings', () => {
@@ -37,4 +40,11 @@ test('a post that will not sponsor a visa stays at the bottom despite core skill
   const noVisa = relevance({ category: 'university', market: 'US', company: 'Iowa State University', location: 'Ames, IA', title: 'Postdoc in Pollination Ecology', description: desc + ' Sponsorship is not available.' }, {}, 40);
   const plain = relevance({ category: 'university', market: 'US', company: 'Iowa State University', location: 'Ames, IA', title: 'Postdoctoral Research Associate', description: 'Field trials. ' + 'x '.repeat(120) }, {}, 20);
   assert.ok(noVisa <= 10 && noVisa < plain, `${noVisa} vs ${plain}`);
+});
+
+test('specific pollination and floral ecology outrank broad ecology', () => {
+  const b = { category: 'university', market: 'US', company: 'Iowa State University', location: 'Ames, IA', description: '' };
+  const broad = relevance({ ...b, title: 'Postdoctoral Fellow, Ecosystem Ecology and Global Change' }, {}, 30);
+  const bees = relevance({ ...b, title: 'Postdoc Research Associate - Bee Pollination Ecology' }, {}, 30);
+  assert.ok(bees > broad, `${bees} vs ${broad}`);
 });
