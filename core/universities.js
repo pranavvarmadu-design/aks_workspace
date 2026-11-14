@@ -74,6 +74,12 @@ export const PLANT_SCIENCE_150 = [
   U('Dartmouth College', 'United States', 'US', 'dartmouth.edu'),
   U('University of Chicago', 'United States', 'US', 'uchicago.edu'),
   U('California Institute of Technology', 'United States', 'US', 'caltech.edu'),
+  U('University of California, San Diego', 'United States', 'US', 'ucsd.edu'),
+  U('University of California, Los Angeles', 'United States', 'US', 'ucla.edu'),
+  U('University of California, Santa Cruz', 'United States', 'US', 'ucsc.edu'),
+  U('University of Connecticut', 'United States', 'US', 'uconn.edu'),
+  U('New York University', 'United States', 'US', 'nyu.edu'),
+  U('Stony Brook University', 'United States', 'US', 'stonybrook.edu'),
 
   // ---- United States: institutes, gardens and federal labs ----
   U('Donald Danforth Plant Science Center', 'United States', 'US', 'danforthcenter.org', 'institute'),
@@ -193,13 +199,20 @@ export const PLANT_SCIENCE_150 = [
 ];
 
 // ---- The 70 universities the sweep checks, in priority order ----
-// Tier 1: Oxford, Cambridge, the Ivy League and Ivy-adjacent US universities.
+// Tier 1: Oxford, Cambridge, the Ivy League and Ivy-adjacent US universities, UC Davis (a
+//         contact there), and every university in California, New Jersey, New York and
+//         Connecticut (where she would like to move).
 // Tier 2: the other US and UK universities. Tier 3: Europe, Singapore and the rest.
 // No Chinese universities. Institutes and botanic gardens stay in PLANT_SCIENCE_150 but are not swept.
 export const TIER_1_DOMAINS = [
   'ox.ac.uk', 'cam.ac.uk',
   'harvard.edu', 'yale.edu', 'princeton.edu', 'columbia.edu', 'upenn.edu', 'brown.edu', 'dartmouth.edu', 'cornell.edu',
   'stanford.edu', 'uchicago.edu', 'caltech.edu', 'duke.edu', 'berkeley.edu', 'wustl.edu',
+  // UC Davis and the states she would like to move to
+  'ucdavis.edu', 'ucr.edu', 'ucsd.edu', 'ucla.edu', 'ucsc.edu', // California
+  'rutgers.edu', // New Jersey (Princeton above)
+  'nyu.edu', 'stonybrook.edu', // New York (Cornell and Columbia above)
+  'uconn.edu', // Connecticut (Yale above)
 ];
 const EXCLUDED_COUNTRIES = new Set(['China']);
 const MORE = [
@@ -208,8 +221,8 @@ const MORE = [
   // United Kingdom and Ireland
   'ed.ac.uk', 'nottingham.ac.uk', 'leeds.ac.uk', 'sheffield.ac.uk', 'warwick.ac.uk', 'imperial.ac.uk', 'tcd.ie',
   // Europe
-  'lmu.de', 'tum.de', 'uni-bonn.de', 'uni-heidelberg.de', 'uni-tuebingen.de', 'uu.nl', 'kuleuven.be', 'uzh.ch',
-  'su.se', 'umu.se', 'uu.se',
+  'lmu.de', 'tum.de', 'uni-bonn.de', 'uni-heidelberg.de', 'uni-tuebingen.de',
+  // Dropped to make room for the new tier-1 places: uu.nl, kuleuven.be, uzh.ch, su.se, umu.se, uu.se.
   // Singapore
   'nus.edu.sg', 'ntu.edu.sg',
 ];

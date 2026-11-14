@@ -101,9 +101,10 @@ export function relevance(job, profile = {}, baseScore = 0) {
     if (s.india.phd) r += 10;
     if (s.india.ncr) r += 5;
   }
-  // Her priorities: Oxford, Cambridge and Ivy-League-level employers first, then US and UK roles.
+  // Her priorities: Oxford, Cambridge, Ivy-League-level employers, UC Davis and the states she
+  // would like to move to (California, New Jersey, New York, Connecticut) first, then US and UK roles.
   if (!s.india) {
-    if (isTier1Employer(job)) r += 25;
+    if (isTopPriority(job)) r += 25;
     if (isUSJob(job) || isUKJob(job)) r += 10;
   }
   // Three or more of her known gaps is normally a skip, however good the field match.
@@ -111,12 +112,17 @@ export function relevance(job, profile = {}, baseScore = 0) {
   return Math.max(0, Math.min(100, Math.round(r)));
 }
 
-// Tier-1 employers (Oxford, Cambridge, Ivy League and Ivy-adjacent), matched on the employer name.
-const TIER_1_RE = /\b(university of oxford|oxford university|university of cambridge|cambridge university|sainsbury laboratory|harvard|yale|princeton|columbia university|university of pennsylvania|upenn|brown university|dartmouth|cornell|stanford|university of chicago|caltech|california institute of technology|duke university|university of california,? berkeley|uc berkeley|washington university in st\.? louis)\b/i;
+// Tier-1 employers, matched on the employer name: Oxford, Cambridge, Ivy League and Ivy-adjacent,
+// every University of California campus, and the universities of NJ, NY and CT.
+const TIER_1_RE = /\b(university of oxford|oxford university|university of cambridge|cambridge university|sainsbury laboratory|harvard|yale|princeton|columbia university|university of pennsylvania|upenn|brown university|dartmouth|cornell|stanford|university of chicago|caltech|california institute of technology|duke university|university of california|uc (davis|berkeley|riverside|san diego|los angeles|santa cruz|santa barbara|irvine|merced)|ucla|ucsd|university of southern california|rutgers|new york university|stony brook|university of connecticut|uconn|washington university in st\.? louis)\b/i;
 const UK_RE = /\b(united kingdom|england|scotland|wales|northern ireland|london|oxford|cambridge(?!,\s*ma)|edinburgh|\w+shire)\b|\((gb|uk)\)/i;
 
 export const isTier1Employer = (job) => TIER_1_RE.test(job.company || '') || /^(ox|cam)\b|university of (oxford|cambridge)/i.test(job.company || '');
 export const isUKJob = (job) => UK_RE.test(job.location || '') || /\b(oxford|cambridge|edinburgh|imperial college|nottingham|leeds|sheffield|warwick)\b/i.test(job.company || '') && !/,\s*(MA|Massachusetts)\b/.test(job.location || '');
 export const isUSJob = (job) => job.market === 'US';
+// The states she would like to move to.
+const MOVE_STATES_RE = /,\s*(CA|NJ|NY|CT)\b|\b(california|new jersey|new york|connecticut)\b/i;
+export const isMoveState = (job) => isUSJob(job) && MOVE_STATES_RE.test(job.location || '');
+export const isTopPriority = (job) => isTier1Employer(job) || isMoveState(job);
 
 export const relevanceLevel = (r) => (r >= 50 ? 'High' : r >= 20 ? 'Medium' : 'Low');

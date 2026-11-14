@@ -3,7 +3,7 @@
 // the resume and saved jobs live in the viewer's private space.
 import { MARKETS, SECTORS, DEFAULT_PROFILE } from '../core/config.js';
 import { scoreJob, finalise } from '../core/collect.js';
-import { screenJob, visaStatus, relevance, relevanceLevel, isTier1Employer } from '../core/screen.js';
+import { screenJob, visaStatus, relevance, relevanceLevel, isTopPriority } from '../core/screen.js';
 import { parseIndeedList, parseIndeedDetail, indeedSearches, indeedToRaw, resultText } from '../core/indeed.js';
 import { AGENTS } from '../core/prompts.js';
 import { esc, resumeToHtml, resumeToMarkdown } from '../core/resume.js';
@@ -139,7 +139,7 @@ function screenTags(j) {
       s.india.phd ? '<span class="tag good">PhD valued</span>' : '',
       s.india.ncr ? '<span class="tag good">Delhi NCR</span>' : '',
     ] : []),
-    isTier1Employer(j) ? '<span class="tag good">Oxbridge / Ivy</span>' : '',
+    isTopPriority(j) ? '<span class="tag good">Top priority</span>' : '',
     s.blockers.length ? `<span class="tag bad">Mentions ${esc(s.blockers.slice(0, 3).join(', '))}</span>` : '',
     s.strengths.length ? `<span class="tag good">${esc(s.strengths.slice(0, 3).join(', '))}</span>` : '',
   ];
