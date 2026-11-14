@@ -67,6 +67,13 @@ export const PLANT_SCIENCE_150 = [
   U('Utah State University', 'United States', 'US', 'usu.edu'),
   U('University of Massachusetts Amherst', 'United States', 'US', 'umass.edu'),
   U('The University of Texas at Austin', 'United States', 'US', 'utexas.edu'),
+  U('Princeton University', 'United States', 'US', 'princeton.edu'),
+  U('Columbia University', 'United States', 'US', 'columbia.edu'),
+  U('University of Pennsylvania', 'United States', 'US', 'upenn.edu'),
+  U('Brown University', 'United States', 'US', 'brown.edu'),
+  U('Dartmouth College', 'United States', 'US', 'dartmouth.edu'),
+  U('University of Chicago', 'United States', 'US', 'uchicago.edu'),
+  U('California Institute of Technology', 'United States', 'US', 'caltech.edu'),
 
   // ---- United States: institutes, gardens and federal labs ----
   U('Donald Danforth Plant Science Center', 'United States', 'US', 'danforthcenter.org', 'institute'),
@@ -185,27 +192,38 @@ export const PLANT_SCIENCE_150 = [
   U('University of São Paulo', 'Brazil', 'OTHER', 'usp.br'),
 ];
 
-// ---- The 70 universities the sweep checks ----
-// The QS top 30 without its Chinese universities (27), then 43 curated universities chosen for her
-// field and her target regions (US, UK and Europe, Singapore). Institutes and botanic gardens above
-// stay in PLANT_SCIENCE_150 but are not swept.
+// ---- The 70 universities the sweep checks, in priority order ----
+// Tier 1: Oxford, Cambridge, the Ivy League and Ivy-adjacent US universities.
+// Tier 2: the other US and UK universities. Tier 3: Europe, Singapore and the rest.
+// No Chinese universities. Institutes and botanic gardens stay in PLANT_SCIENCE_150 but are not swept.
+export const TIER_1_DOMAINS = [
+  'ox.ac.uk', 'cam.ac.uk',
+  'harvard.edu', 'yale.edu', 'princeton.edu', 'columbia.edu', 'upenn.edu', 'brown.edu', 'dartmouth.edu', 'cornell.edu',
+  'stanford.edu', 'uchicago.edu', 'caltech.edu', 'duke.edu', 'berkeley.edu', 'wustl.edu',
+];
 const EXCLUDED_COUNTRIES = new Set(['China']);
-const CURATED_PRIORITY = [
+const MORE = [
   // United States
-  'wsu.edu', 'ucr.edu', 'psu.edu', 'rutgers.edu', 'uga.edu', 'harvard.edu', 'duke.edu', 'stanford.edu',
-  'yale.edu', 'wustl.edu', 'arizona.edu', 'colostate.edu', 'missouri.edu', 'unl.edu',
+  'wsu.edu', 'ucr.edu', 'psu.edu', 'rutgers.edu', 'uga.edu', 'arizona.edu', 'colostate.edu', 'missouri.edu', 'unl.edu',
   // United Kingdom and Ireland
-  'ox.ac.uk', 'cam.ac.uk', 'ed.ac.uk', 'nottingham.ac.uk', 'leeds.ac.uk', 'sheffield.ac.uk', 'warwick.ac.uk',
-  'imperial.ac.uk', 'tcd.ie',
+  'ed.ac.uk', 'nottingham.ac.uk', 'leeds.ac.uk', 'sheffield.ac.uk', 'warwick.ac.uk', 'imperial.ac.uk', 'tcd.ie',
   // Europe
-  'lmu.de', 'tum.de', 'uni-bonn.de', 'uni-heidelberg.de', 'uni-tuebingen.de', 'uu.nl', 'uva.nl',
-  'universiteitleiden.nl', 'kuleuven.be', 'uzh.ch', 'unibe.ch', 'su.se', 'umu.se', 'uu.se', 'lu.se',
-  'au.dk', 'univie.ac.at', 'boku.ac.at',
+  'lmu.de', 'tum.de', 'uni-bonn.de', 'uni-heidelberg.de', 'uni-tuebingen.de', 'uu.nl', 'kuleuven.be', 'uzh.ch',
+  'su.se', 'umu.se', 'uu.se',
   // Singapore
   'nus.edu.sg', 'ntu.edu.sg',
 ];
 const byDomain = new Map(PLANT_SCIENCE_150.map((u) => [u.domain, u]));
-export const TOP_70 = [
-  ...PLANT_SCIENCE_150.filter((u) => u.rank && !EXCLUDED_COUNTRIES.has(u.country)),
-  ...CURATED_PRIORITY.map((d) => byDomain.get(d)),
-];
+const isUK = (u) => /united kingdom|ireland/i.test(u.country);
+const tierOf = (u) => (TIER_1_DOMAINS.includes(u.domain) ? 1 : u.market === 'US' || isUK(u) ? 2 : 3);
+const chosen = [...new Set([
+  ...TIER_1_DOMAINS,
+  ...PLANT_SCIENCE_150.filter((u) => u.rank && !EXCLUDED_COUNTRIES.has(u.country)).map((u) => u.domain),
+  ...MORE,
+])].map((d) => byDomain.get(d));
+// Tier, then US before UK before the rest, then QS rank, then list order.
+const regionOrder = (u) => (u.market === 'US' ? 0 : isUK(u) ? 1 : 2);
+export const TOP_70 = chosen
+  .map((u, i) => ({ ...u, tier: tierOf(u), i }))
+  .sort((a, b) => a.tier - b.tier || regionOrder(a) - regionOrder(b) || (a.rank ?? 99) - (b.rank ?? 99) || a.i - b.i)
+  .map(({ i, ...u }) => u);

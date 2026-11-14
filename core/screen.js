@@ -101,9 +101,22 @@ export function relevance(job, profile = {}, baseScore = 0) {
     if (s.india.phd) r += 10;
     if (s.india.ncr) r += 5;
   }
+  // Her priorities: Oxford, Cambridge and Ivy-League-level employers first, then US and UK roles.
+  if (!s.india) {
+    if (isTier1Employer(job)) r += 25;
+    if (isUSJob(job) || isUKJob(job)) r += 10;
+  }
   // Three or more of her known gaps is normally a skip, however good the field match.
   if (s.blockers.length >= 3) r = Math.min(r, 15);
   return Math.max(0, Math.min(100, Math.round(r)));
 }
+
+// Tier-1 employers (Oxford, Cambridge, Ivy League and Ivy-adjacent), matched on the employer name.
+const TIER_1_RE = /\b(university of oxford|oxford university|university of cambridge|cambridge university|sainsbury laboratory|harvard|yale|princeton|columbia university|university of pennsylvania|upenn|brown university|dartmouth|cornell|stanford|university of chicago|caltech|california institute of technology|duke university|university of california,? berkeley|uc berkeley|washington university in st\.? louis)\b/i;
+const UK_RE = /\b(united kingdom|england|scotland|wales|northern ireland|london|oxford|cambridge(?!,\s*ma)|edinburgh|\w+shire)\b|\((gb|uk)\)/i;
+
+export const isTier1Employer = (job) => TIER_1_RE.test(job.company || '') || /^(ox|cam)\b|university of (oxford|cambridge)/i.test(job.company || '');
+export const isUKJob = (job) => UK_RE.test(job.location || '') || /\b(oxford|cambridge|edinburgh|imperial college|nottingham|leeds|sheffield|warwick)\b/i.test(job.company || '') && !/,\s*(MA|Massachusetts)\b/.test(job.location || '');
+export const isUSJob = (job) => job.market === 'US';
 
 export const relevanceLevel = (r) => (r >= 50 ? 'High' : r >= 20 ? 'Medium' : 'Low');

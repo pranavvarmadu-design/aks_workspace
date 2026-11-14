@@ -2,7 +2,7 @@ import { MARKETS, SECTORS } from '../../core/config.js';
 import { esc, resumeToHtml, resumeToMarkdown } from '../../core/resume.js';
 import { load, save } from './store.js';
 import { analyseJob, buildTailoredResume, extractProfile } from './tailor.js';
-import { screenJob, visaStatus, relevance, relevanceLevel } from '../../core/screen.js';
+import { screenJob, visaStatus, relevance, relevanceLevel, isTier1Employer } from '../../core/screen.js';
 import { readPostings, robotsAllows } from '../../core/postings.js';
 
 const $ = (s) => document.querySelector(s);
@@ -93,6 +93,7 @@ function screenTags(j) {
       s.india.phd ? '<span class="tag good">PhD valued</span>' : '',
       s.india.ncr ? '<span class="tag good">Delhi NCR</span>' : '',
     ] : []),
+    isTier1Employer(j) ? '<span class="tag good">Oxbridge / Ivy</span>' : '',
     s.blockers.length ? `<span class="tag bad" title="Check whether these are required">Mentions ${esc(s.blockers.slice(0, 3).join(', '))}</span>` : '',
     s.strengths.length ? `<span class="tag good">${esc(s.strengths.slice(0, 3).join(', '))}</span>` : '',
   ];
