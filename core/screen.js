@@ -7,8 +7,29 @@ export const DEFAULT_BLOCKERS = [
   'transcriptomic', 'rna-seq', 'qpcr', 'rt-qpcr', 'gene expression analysis', 'crispr',
   'qtl', 'gwas', 'quantitative genetics', 'genomic', 'ngs', 'bioinformatic', 'python', 'scripting',
   'geospatial', 'remote sensing', 'species distribution model', 'stable isotope', 'high-throughput screening',
-  'mass spectrometry', 'lc-ms', 'gc-ms', 'mammalian cell culture', 'animal model', 'machine learning',
+  'lc-ms', 'mammalian cell culture', 'animal model', 'machine learning',
 ];
+
+// Her core skills. A listing that asks for any of these goes to the top of the list.
+export const CORE_SKILLS = [
+  ['Ultrastructure', /ultrastructur/i],
+  ['Cell biology', /cell biolog/i],
+  ['Developmental biology', /developmental biolog|plant development|\b(floral|flower|leaf|root|seed|reproductive|organ) development/i],
+  ['Microscopy', /microscop/i],
+  ['Pollination', /pollinat/i],
+  ['Ecology', /ecolog/i],
+  ['Biodiversity conservation', /biodiversity|conservation (biolog|science|ecolog|genetics)|plant conservation|species conservation/i],
+  ['HPLC', /\bu?hplc\b|\buplc\b|liquid chromatograph/i],
+  ['Plant biochemistry', /plant biochem|phytochem/i],
+  ['ICP-MS', /\bicp-?(ms|oes|aes)\b|inductively coupled plasma/i],
+  ['GC-MS', /\bgc-?ms\b|\bgc\/ms\b|gas chromatograph/i],
+  ['Metabolite profiling', /metabolit|metabolom|plant extract|biochemical profil/i],
+];
+export function coreSkillMatches(job) {
+  const title = job.title || '';
+  const text = `${title}\n${job.description || ''}`;
+  return CORE_SKILLS.filter(([, re]) => re.test(text)).map(([name, re]) => ({ name, inTitle: re.test(title) }));
+}
 
 // Work where she is genuinely competitive.
 export const DEFAULT_STRENGTHS = [
@@ -65,13 +86,17 @@ const has = (text, term) => new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g,
 export function screenJob(job, profile = {}) {
   const text = `${job.title || ''}\n${job.description || ''}`;
   const blockers = (profile.blockerTerms?.length ? profile.blockerTerms : DEFAULT_BLOCKERS).filter((t) => has(text, t));
-  const strengths = (profile.strengthTerms?.length ? profile.strengthTerms : DEFAULT_STRENGTHS).filter((t) => has(text, t));
+  const core = coreSkillMatches(job);
+  // Strengths already counted as core skills are not counted twice.
+  const strengths = (profile.strengthTerms?.length ? profile.strengthTerms : DEFAULT_STRENGTHS)
+    .filter((t) => has(text, t) && !CORE_SKILLS.some(([, re]) => re.test(t)));
   return {
     hasText: (job.description || '').length > 200,
     sponsorship: !isIndia(job) && (job.market === 'US' || job.category === 'captured') ? sponsorship(text) : null,
     india: isIndia(job) ? indiaChecks(job) : null,
     blockers: [...new Set(blockers)].slice(0, 6),
     strengths: [...new Set(strengths)].slice(0, 6),
+    core,
   };
 }
 
@@ -88,7 +113,9 @@ export function visaStatus(job) {
 export function relevance(job, profile = {}, baseScore = 0) {
   const s = screenJob(job, profile);
   let r = baseScore;
-  r += Math.min(4, s.strengths.length) * 8;
+  // Core skills weigh most: +12 each (up to five), +8 more when named in the title (up to two).
+  r += Math.min(5, s.core.length) * 12 + Math.min(2, s.core.filter((c) => c.inTitle).length) * 8;
+  r += Math.min(4, s.strengths.length) * 6;
   r -= Math.min(3, s.blockers.length) * 25;
   const visa = visaStatus(job);
   if (visa === 'no') r -= 60;

@@ -14,7 +14,8 @@ test('sponsorship language is classified', () => {
 test('screenJob flags blockers and strengths without hiding anything', () => {
   const s = screenJob({ market: 'US', title: 'Postdoc in floral anatomy', description: 'Required: molecular cloning and RNA-seq. Light microscopy of nectaries. ' + 'x'.repeat(200) });
   assert.ok(s.blockers.includes('molecular cloning') && s.blockers.includes('rna-seq'));
-  assert.ok(s.strengths.includes('anatomy') && s.strengths.includes('microscopy') && s.strengths.includes('nectar'));
+  assert.ok(s.strengths.includes('anatomy') && s.strengths.includes('nectar'));
+  assert.ok(s.core.some((c) => c.name === 'Microscopy') && !s.strengths.includes('microscopy'), 'microscopy counts once, as a core skill');
   assert.equal(s.hasText, true);
   assert.equal(screenJob({ market: 'IN', title: 'x', description: 'no sponsorship' }).sponsorship, null, 'sponsorship only judged for US or captured posts');
 });

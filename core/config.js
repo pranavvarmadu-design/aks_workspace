@@ -26,7 +26,12 @@ export const SECTORS = {
 export const DEFAULT_PROFILE = {
   // Field keywords drive every search. Replace them from her resume
   // (Settings -> "Extract keywords from resume").
-  fieldKeywords: ['plant anatomy', 'pollination biology', 'floral biology', 'plant reproductive biology'],
+  fieldKeywords: [
+    'plant anatomy', 'pollination biology', 'floral biology', 'plant reproductive biology',
+    // Her core skills
+    'ultrastructure', 'plant cell biology', 'plant developmental biology', 'microscopy', 'pollination ecology',
+    'plant ecology', 'biodiversity conservation', 'plant biochemistry', 'metabolite profiling', 'hplc', 'gc-ms', 'icp-ms',
+  ],
   // Any-of role terms used for university searches.
   academicRoles: ['postdoctoral', 'postdoc', 'postdoctoral fellow', 'postdoctoral research associate', 'postdoctoral scholar'],
   // Up to three search phrases per India sector.
@@ -43,7 +48,7 @@ export const DEFAULT_PROFILE = {
     'mathematical', 'computational', 'engineering', 'bioelectronic', 'ultrasound', 'quantum', 'artificial intelligence',
     'machine learning', 'drug delivery', 'tissue engineering', 'regeneration', 'enzyme kinetics', 'biophysics',
     'chemical biology', 'physics', 'mouse', 'zebrafish', 'mammal', 'veterinary', 'animal science',
-    'pharmacolog', 'pharmaceutic', 'medicinal chemistry', 'drug', 'cell biology', 'assay',
+    'pharmacolog', 'pharmaceutic', 'medicinal chemistry', 'drug', 'assay',
     'economic', 'aerosol', 'emission', 'methane',
     'deer', 'wildlife', 'geography',
   ],
@@ -61,6 +66,8 @@ export const DEFAULT_PROFILE = {
     'plant', 'botan', 'crop', 'floral', 'flower', 'pollinat', 'nectar', 'horticult', 'agronom', 'seed', 'herbar',
     'phenolog', 'ecolog', 'evolution', 'systematic', 'phenomic', 'viticult', 'mycolog', 'soil', 'agricult', 'food',
     'horticult', 'forest', 'entomolog', 'insect', 'bee',
+    // Her core skills
+    'ultrastruct', 'microscop', 'biodivers', 'conservation', 'phytochem', 'metabolit', 'metabolom',
   ],
   // Keep only university listings whose title matches academicRoles (postdoc by default).
   universityRolesOnly: true,
@@ -79,9 +86,12 @@ export const DEFAULT_SOURCES = {
     { name: 'HigherEdJobs: Laboratory and Research', url: 'https://www.higheredjobs.com/rss/categoryFeed.cfm?catID=150', market: 'US', university: true },
   ],
   // jobs.ac.uk: UK universities and institutes (Oxford, Cambridge, John Innes, Kew), some Europe.
-  jobsAcUk: ['plant postdoctoral', 'plant research associate', 'botany', 'pollination', 'plant science research fellow'],
+  jobsAcUk: [
+    'plant postdoctoral', 'plant research associate', 'botany', 'pollination', 'plant science research fellow',
+    'plant cell biology', 'plant ecology', 'biodiversity conservation', 'microscopy plant', 'plant metabolites', 'plant biochemistry',
+  ],
   // Science Careers (journal Science): international, keyword RSS. Market comes from each posting's location.
-  scienceCareers: ['postdoctoral plant', 'postdoc botany', 'pollination', 'plant biology postdoctoral'],
+  scienceCareers: ['postdoctoral plant', 'postdoc botany', 'pollination', 'plant biology postdoctoral', 'plant ecology postdoctoral', 'plant cell biology', 'plant biochemistry postdoctoral'],
   // University career sites that run on Workday expose a JSON search endpoint.
   workday: [
     { name: 'NUS', host: 'nus.wd3.myworkdayjobs.com', tenant: 'nus', site: 'NUS', market: 'SG', university: true },

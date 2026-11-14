@@ -93,6 +93,7 @@ function screenTags(j) {
       s.india.phd ? '<span class="tag good">PhD valued</span>' : '',
       s.india.ncr ? '<span class="tag good">Delhi NCR</span>' : '',
     ] : []),
+    s.core.length ? `<span class="tag rel-high" title="Her core skills named in this listing">Core skills: ${esc(s.core.slice(0, 3).map((c) => c.name).join(', '))}${s.core.length > 3 ? ` +${s.core.length - 3}` : ''}</span>` : '',
     isTopPriority(j) ? '<span class="tag good">Top priority</span>' : '',
     isBiotechGenetics(j) ? '<span class="tag warn" title="Biotechnology or genetics: outside her skills, lower priority">Biotech / genetics</span>' : '',
     s.blockers.length ? `<span class="tag bad" title="Check whether these are required">Mentions ${esc(s.blockers.slice(0, 3).join(', '))}</span>` : '',
