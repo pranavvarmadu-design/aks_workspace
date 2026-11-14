@@ -74,3 +74,10 @@ details { margin: 8px 0; } summary { cursor: pointer; font-weight: 600; }
 #screen-stop h3 { margin: 0 0 6px; font-size: 14px; color: var(--warn); }
 .verdict { border-radius: 6px; padding: 8px; margin-bottom: 8px; background: var(--accent-soft); color: var(--accent); }
 .verdict.borderline, .verdict.skip { background: var(--warn-soft); color: var(--warn); }
+
+.listbar { display: flex; gap: 6px; }
+.listbar input { flex: 1; min-width: 0; }
+.listbar select { width: auto; }
+.tag.warn { background: var(--bg); color: var(--warn); border-color: var(--warn); }
+.tag.rel-high { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.tag.rel-medium { background: var(--accent-soft); color: var(--accent); border-color: transparent; }

@@ -74,3 +74,36 @@ export function screenJob(job, profile = {}) {
     strengths: [...new Set(strengths)].slice(0, 6),
   };
 }
+
+// Visa label for a non-India post: 'yes' | 'no' | 'not_mentioned' (posting read, nothing said)
+// | 'unchecked' (only a title is known, so it cannot be judged yet). null for India posts.
+export function visaStatus(job) {
+  if (isIndia(job)) return null;
+  const s = sponsorship(`${job.title || ''}\n${job.description || ''}`);
+  if (s) return s;
+  return (job.description || '').length > 200 ? 'not_mentioned' : 'unchecked';
+}
+
+// 0-100 fit for her, used for ranking: field match, strengths, gaps, visa and India flags.
+export function relevance(job, profile = {}, baseScore = 0) {
+  const s = screenJob(job, profile);
+  let r = baseScore;
+  r += Math.min(4, s.strengths.length) * 8;
+  r -= Math.min(3, s.blockers.length) * 25;
+  const visa = visaStatus(job);
+  if (visa === 'no') r -= 60;
+  if (visa === 'yes') r += 10;
+  if (s.india) {
+    if (s.india.sales) r -= 60;
+    if (s.india.degrees.length) r -= 20;
+    if (s.india.years != null && s.india.years >= 3) r -= 10;
+    if (s.india.industryExperience) r -= 10;
+    if (s.india.phd) r += 10;
+    if (s.india.ncr) r += 5;
+  }
+  // Three or more of her known gaps is normally a skip, however good the field match.
+  if (s.blockers.length >= 3) r = Math.min(r, 15);
+  return Math.max(0, Math.min(100, Math.round(r)));
+}
+
+export const relevanceLevel = (r) => (r >= 50 ? 'High' : r >= 20 ? 'Medium' : 'Low');

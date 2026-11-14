@@ -49,3 +49,30 @@ test('India checks on wording from a real posting', async () => {
   assert.equal(indiaChecks({ title: 'x', description: 'Experience in plant anatomy and microscopy.' }).industryExperience, false, '"plant" is botany, not a manufacturing plant');
   assert.ok(screenJob({ market: 'IN', title: 'Field trials scientist', description: 'Conducting high quality field trials' }).strengths.includes('field trial'));
 });
+
+test('visa labels: yes, no, not mentioned, and unchecked when only a title is known', async () => {
+  const { visaStatus } = await import('../core/screen.js');
+  const body = (s) => s + ' ' + 'Duties include field sampling and microscopy. '.repeat(6);
+  assert.equal(visaStatus({ market: 'US', title: 'Postdoc', description: body('This position is eligible for J-1 visa sponsorship.') }), 'yes');
+  assert.equal(visaStatus({ market: 'US', title: 'Postdoc', description: body('Candidates must be authorized to work in the US without sponsorship.') }), 'no');
+  assert.equal(visaStatus({ market: 'US', title: 'Postdoc', description: body('Apply with a CV.') }), 'not_mentioned');
+  assert.equal(visaStatus({ market: 'US', title: 'Postdoc', description: '' }), 'unchecked');
+  assert.equal(visaStatus({ market: 'IN', title: 'Scientist', description: body('') }), null);
+});
+
+test('relevance ranks fit above gaps and sinks no-sponsorship posts', async () => {
+  const { relevance } = await import('../core/screen.js');
+  const txt = (s) => s + ' ' + 'x '.repeat(120);
+  const good = relevance({ market: 'US', title: 'Postdoc', description: txt('Floral anatomy, nectar chemistry and pollination fieldwork with microscopy.') }, {}, 30);
+  const gaps = relevance({ market: 'US', title: 'Postdoc', description: txt('Required: molecular cloning, RNA-seq and Python.') }, {}, 30);
+  const noVisa = relevance({ market: 'US', title: 'Postdoc', description: txt('Floral anatomy and pollination. Must be authorized to work in the US without sponsorship.') }, {}, 30);
+  assert.ok(good > gaps && good > noVisa, `${good} ${gaps} ${noVisa}`);
+  const sales = relevance({ market: 'IN', title: 'Area Sales Manager - Seeds', description: '' }, {}, 30);
+  assert.equal(sales, 0);
+});
+
+test('three or more gaps rank low even with a strong field match', async () => {
+  const { relevance, relevanceLevel } = await import('../core/screen.js');
+  const job = { market: 'US', title: 'Postdoc Plant Phenomics', description: 'Requires Python, remote sensing and machine learning. Imaging of plant collections. ' + 'x '.repeat(120) };
+  assert.equal(relevanceLevel(relevance(job, {}, 66)), 'Low');
+});

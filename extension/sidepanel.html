@@ -30,7 +30,10 @@
         <button data-cat="saved" aria-pressed="false">Saved <span class="count"></span></button>
       </div>
       <div class="chips" id="filters"></div>
-      <input id="search" type="search" placeholder="Filter by title, employer or keyword" aria-label="Filter listings">
+      <div class="listbar">
+        <input id="search" type="search" placeholder="Filter by title, employer or keyword" aria-label="Filter listings">
+        <select id="sort" aria-label="Sort listings"><option value="relevance">Most relevant</option><option value="newest">Newest</option></select>
+      </div>
       <div id="job-list"></div>
     </section>
 

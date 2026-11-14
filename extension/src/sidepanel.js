@@ -2,7 +2,8 @@ import { MARKETS, SECTORS } from '../../core/config.js';
 import { esc, resumeToHtml, resumeToMarkdown } from '../../core/resume.js';
 import { load, save } from './store.js';
 import { analyseJob, buildTailoredResume, extractProfile } from './tailor.js';
-import { screenJob } from '../../core/screen.js';
+import { screenJob, visaStatus, relevance, relevanceLevel } from '../../core/screen.js';
+import { readPostings, robotsAllows } from '../../core/postings.js';
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -14,7 +15,7 @@ const send = async (msg) => {
 };
 
 let state;
-const view = { cat: 'university', filter: 'all', query: '', target: null };
+const view = { sort: 'relevance',  cat: 'university', filter: 'all', query: '', target: null };
 
 // ---------- tabs ----------
 
@@ -26,13 +27,20 @@ for (const b of $$('.tabs button')) b.onclick = () => showTab(b.dataset.tab);
 
 // ---------- jobs ----------
 
-const allJobs = () => [...state.captured, ...state.jobs];
+// Listings plus any posting text she has had the extension read (kept across refreshes).
+const withText = (j) => {
+  const d = state.details?.[j.id];
+  if (!d) return j;
+  return { ...j, closed: !!d.closed, description: j.description || d.text || '' };
+};
+const allJobs = () => [...state.captured, ...state.jobs].map(withText);
 const stateOf = (j) => state.jobState[j.id];
 const isNew = (j) => !stateOf(j) && j.category !== 'captured' && (!state.seenAt || j.firstSeen > state.seenAt);
 
 function jobsFor(cat) {
   if (cat === 'saved') return allJobs().filter((j) => ['saved', 'applied'].includes(stateOf(j)));
-  return state.jobs.filter((j) => j.category === cat && stateOf(j) !== 'hidden');
+  // Closed postings leave the lists; one she saved stays under Saved, marked Closed.
+  return state.jobs.map(withText).filter((j) => j.category === cat && stateOf(j) !== 'hidden' && !j.closed);
 }
 
 function ago(isoDate) {
@@ -60,7 +68,10 @@ function renderJobs() {
       if (key !== view.filter) return false;
     }
     return !q || `${j.title} ${j.company} ${j.location} ${j.description}`.toLowerCase().includes(q);
-  });
+  }).map((j) => ({ ...j, rel: relevance(j, state.settings.profile, j.score || 0) }));
+  if (view.sort === 'newest') list.sort((a, b) => String(b.postedAt || b.firstSeen).localeCompare(String(a.postedAt || a.firstSeen)));
+  else list.sort((a, b) => b.rel - a.rel || String(b.postedAt || b.firstSeen).localeCompare(String(a.postedAt || a.firstSeen)));
+  $('#sort').value = view.sort;
 
   $('#job-list').innerHTML = list.length ? list.slice(0, 200).map(jobCard).join('') : `<div class="empty">${emptyText()}</div>`;
 }
@@ -74,7 +85,6 @@ function emptyText() {
 function screenTags(j) {
   const s = screenJob(j, state.settings.profile);
   return [
-    s.sponsorship === 'no' ? '<span class="tag bad">No visa sponsorship</span>' : s.sponsorship === 'yes' ? '<span class="tag good">Sponsorship mentioned</span>' : '',
     ...(s.india ? [
       s.india.sales ? '<span class="tag bad">Sales or marketing role</span>' : '',
       s.india.years != null && s.india.years >= 2 ? `<span class="tag bad">Asks ${s.india.years}+ years experience</span>` : '',
@@ -88,6 +98,14 @@ function screenTags(j) {
   ];
 }
 
+const VISA_TAG = {
+  yes: '<span class="tag good">Visa: Yes</span>',
+  no: '<span class="tag bad">Visa: No</span>',
+  not_mentioned: '<span class="tag warn">Visa: Not mentioned</span>',
+  unchecked: '<span class="tag">Visa: not checked</span>',
+};
+const visaTag = (j) => (j.closed ? '<span class="tag bad">Closed</span>' : VISA_TAG[visaStatus(j)] || '');
+
 function jobCard(j) {
   const st = stateOf(j);
   const tags = [
@@ -95,7 +113,8 @@ function jobCard(j) {
     st === 'applied' ? '<span class="tag state">Applied</span>' : '',
     j.category === 'university' ? `<span class="tag">${esc(MARKETS[j.market]?.label || j.market || '')}</span>` : '',
     j.category === 'industry' ? `<span class="tag">${esc(SECTORS[j.sector]?.label || '')}</span>` : '',
-    j.score ? `<span class="tag ${j.score >= 60 ? 'good' : ''}">Match ${j.score}</span>` : '',
+    `<span class="tag rel-${relevanceLevel(j.rel).toLowerCase()}" title="Relevance ${j.rel}/100">${relevanceLevel(j.rel)} relevance</span>`,
+    visaTag(j),
     ...screenTags(j),
     state.tailored[j.id] ? '<span class="tag good">Resume ready</span>' : '',
     `<span class="tag">${esc(j.source)}</span>`,
@@ -106,11 +125,35 @@ function jobCard(j) {
     <div class="tags">${tags}</div>
     <div class="actions">
       <button data-act="tailor" class="primary">${state.tailored[j.id] ? 'Open resume' : 'Tailor resume'}</button>
+      ${!j.closed && visaStatus(j) === 'unchecked' && j.url ? '<button data-act="read" title="Reads this one posting, as if you opened it">Check visa</button>' : ''}
       ${st === 'saved' || st === 'applied' ? '<button data-act="unsave">Remove</button>' : '<button data-act="saved">Shortlist</button>'}
       ${st === 'applied' ? '' : '<button data-act="applied">Mark applied</button>'}
       ${st || j.category === 'captured' ? '' : '<button data-act="hidden">Hide</button>'}
     </div>
   </article>`;
+}
+
+// Reads one posting the user asked about and keeps its text for screening and tailoring.
+async function readPosting(j, btn) {
+  const origin = new URL(j.url).origin + '/*';
+  // Must run before any await so Chrome treats it as part of the click.
+  const allowed = chrome.permissions.request({ origins: [origin] }).catch(() => false);
+  const label = btn?.textContent;
+  if (btn) { btn.disabled = true; btn.textContent = 'Reading...'; }
+  try {
+    if (!(await allowed)) throw new Error('Chrome was not given access to that site.');
+    if (!(await robotsAllows(fetch, j.url))) throw new Error('That site does not allow automated reading. Open the posting and use "Save job from this page".');
+    const got = (await readPostings(fetch, [{ ...j, description: '' }], { limit: 1, delayMs: 0 }))[j.id];
+    if (!got) throw new Error('Could not read the posting. Open it and use "Save job from this page".');
+    if (got.closed) $('#status').textContent = `"${j.title}" is no longer open.`;
+    state.details = { ...state.details, [j.id]: { ...got, at: new Date().toISOString() } };
+    await save({ details: state.details });
+    renderJobs();
+  } catch (e) {
+    $('#status').textContent = e.message;
+    if (btn) { btn.disabled = false; btn.textContent = label; }
+    throw e;
+  }
 }
 
 $('#categories').onclick = (e) => {
@@ -125,6 +168,7 @@ $('#filters').onclick = (e) => {
   if (b) { view.filter = b.dataset.filter; renderJobs(); }
 };
 $('#search').oninput = (e) => { view.query = e.target.value; renderJobs(); };
+$('#sort').onchange = (e) => { view.sort = e.target.value; renderJobs(); };
 
 $('#job-list').onclick = async (e) => {
   const b = e.target.closest('button[data-act]');
@@ -132,7 +176,11 @@ $('#job-list').onclick = async (e) => {
   const id = b.closest('.job').dataset.id;
   const j = allJobs().find((x) => x.id === id);
   const act = b.dataset.act;
-  if (act === 'tailor') return setTarget(j);
+  if (act === 'read') return readPosting(j, b);
+  if (act === 'tailor') {
+    if (!j.description && j.url) await readPosting(j, b).catch(() => {});
+    return setTarget(allJobs().find((x) => x.id === id));
+  }
   if (act === 'unsave') {
     delete state.jobState[id];
     if (j.category === 'captured') state.captured = state.captured.filter((c) => c.id !== id);
@@ -186,6 +234,10 @@ chrome.runtime.onMessage.addListener((m) => { if (m?.type === 'progress') render
 chrome.storage.onChanged.addListener(async (changes) => {
   if (!state) return;
   if (changes.captureError?.newValue) $('#status').textContent = changes.captureError.newValue.message;
+  if (changes.details) {
+    state.details = changes.details.newValue || {};
+    renderJobs();
+  }
   if (changes.jobs || changes.captured || changes.status) {
     Object.assign(state, await load('jobs', 'captured', 'jobState', 'status'));
     if (changes.captured && (changes.captured.newValue?.length || 0) > (changes.captured.oldValue?.length || 0)) {

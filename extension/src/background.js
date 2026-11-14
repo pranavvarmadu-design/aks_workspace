@@ -6,6 +6,7 @@ import { collectAll } from '../../core/collect.js';
 import { UNIVERSITY_RE } from '../../core/config.js';
 import { normaliseJob } from '../../core/collectors.js';
 import { load, save } from './store.js';
+import { readPostings } from '../../core/postings.js';
 
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
 chrome.runtime.onInstalled.addListener(() => {
@@ -52,10 +53,31 @@ function refresh({ forceCollect = false } = {}) {
       status = { lastRun: now, report: result.report, mode: 'local' };
     }
     await save({ jobs, status });
+    readUnread().catch(console.error); // runs on after the refresh returns
     await updateBadge();
     return status;
   })().finally(() => { refreshing = null; });
   return refreshing;
+}
+
+// Reads posting pages that have no text yet (visa sponsorship, requirements), politely.
+let reading = null;
+function readUnread() {
+  reading ??= (async () => {
+    const { jobs, captured, details } = await load('jobs', 'captured', 'details');
+    const todo = [...jobs.filter((j) => j.category === 'university'), ...jobs.filter((j) => j.category !== 'university'), ...captured]
+      .filter((j) => !details[j.id]);
+    await readPostings(fetch, todo, {
+      limit: 40,
+      delayMs: 4000,
+      canRead: (url) => chrome.permissions.contains({ origins: [new URL(url).origin + '/*'] }),
+      onRead: async (id, { text, closed }) => {
+        const cur = (await load('details')).details;
+        await save({ details: { ...cur, [id]: { text, closed, at: new Date().toISOString() } } });
+      },
+    });
+  })().finally(() => { reading = null; });
+  return reading;
 }
 
 async function updateBadge() {
@@ -145,6 +167,7 @@ async function capture(tab) {
 
 const handlers = {
   refresh: (m) => refresh(m),
+  readUnread: () => readUnread(),
   capture: () => capture(),
   badge: () => updateBadge(),
   pushConfig: async () => {

@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { DEFAULT_PROFILE, DEFAULT_SOURCES } from '../core/config.js';
 import { collectAll } from '../core/collect.js';
 import { sendDigest } from './digest.js';
+import { readPostings } from '../core/postings.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const env = process.env;
@@ -40,7 +41,7 @@ export function mergeJobs(existing, fresh, now = new Date()) {
   const added = [];
   for (const j of fresh) {
     const old = byId.get(j.id);
-    if (old) byId.set(j.id, { ...j, firstSeen: old.firstSeen, lastSeen: now.toISOString() });
+    if (old) byId.set(j.id, { ...j, description: j.description || old.description || '', firstSeen: old.firstSeen, lastSeen: now.toISOString() });
     else {
       const n = { ...j, firstSeen: now.toISOString(), lastSeen: now.toISOString() };
       byId.set(j.id, n);
@@ -62,7 +63,10 @@ export function collect() {
       keys: { adzunaAppId: env.ADZUNA_APP_ID, adzunaAppKey: env.ADZUNA_APP_KEY },
     });
     const { jobs, added } = mergeJobs(read('jobs.json', []), fresh, started);
-    write('jobs.json', jobs);
+    // Read posting pages for visa sponsorship and requirements (robots.txt obeyed, 4 s apart).
+    const texts = await readPostings(fetch, jobs, { limit: Number(env.READ_POSTINGS_PER_RUN || 40), delayMs: 4000 });
+    for (const j of jobs) if (texts[j.id]) Object.assign(j, texts[j.id].closed ? { closed: true } : { description: texts[j.id].text });
+    write('jobs.json', jobs.filter((j) => !j.closed));
     const status = { lastRun: started.toISOString(), total: jobs.length, added: added.length, report };
     write('status.json', status);
     console.log(`[collect] ${fresh.length} fetched, ${added.length} new, ${jobs.length} stored; ${report.filter((r) => !r.ok).length} source errors`);

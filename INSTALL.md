@@ -34,6 +34,8 @@ Chrome may show a banner about developer-mode extensions when it starts. That is
 ## Everyday use
 
 - **Universities** tab: US postdoc listings, refreshed automatically every 12 hours while Chrome is open.
+- **Visa labels** on US cards: **Visa: Yes**, **Visa: No** or **Visa: Not mentioned**, read from the posting itself. After each refresh the extension reads up to 40 postings in the background, one every 4 seconds and only where the site's robots.txt allows; until a posting is read its card says **Visa: not checked**, with a **Check visa** button. Postings that have closed drop off the list.
+- **Ranking:** cards are sorted by relevance to her (High, Medium, Low): field match, her strengths, her known gaps, and visa status. "Visa: No" and three or more gaps always rank Low. Switch to **Newest** with the sort menu.
 - **India industry** tab: agritech, biotech and pharma roles (needs the Adzuna key). Cards flag sales roles, required years of industry experience, and required degrees such as B.Pharm, M.Pharm or MBA; "PhD valued" and "Delhi NCR" show in green. For Naukri, LinkedIn or company career pages, open the job and use **Save job from this page**.
 - **LinkedIn, Indeed or any careers page:** open the job, then click **Save job from this page** in the panel, or right-click the page and choose **Save this job to Job Finder**. It appears under **Saved**.
 - **Job cards** flag "No visa sponsorship" and techniques the posting mentions that she lacks, once the posting text is available (always for jobs saved from a page).

@@ -21,6 +21,7 @@ const DEFAULTS = {
   captured: [], // jobs she saved from pages she was viewing
   jobState: {}, // id -> 'saved' | 'applied' | 'hidden'
   tailored: {}, // id -> { resume, analysis, review, builtAt }
+  details: {}, // id -> { text, at }: posting text read on request
   status: null, // { lastRun, report, mode }
   seenAt: null, // ISO time she last looked at the list
 };
