@@ -16,9 +16,19 @@ let db, mine, sample, downloads, mcp;
 
 const notice = (msg) => { $('#notice').hidden = !msg; $('#notice').textContent = msg || ''; };
 
+// "Applications" is the Jobs tab showing only the pipeline (the saved jobs and their stages).
 function showTab(name) {
+  const apps = name === 'apps';
+  if (name === 'jobs' || apps) {
+    const cat = apps ? 'saved' : view.cat === 'saved' ? 'university' : view.cat;
+    if (cat !== view.cat) { view.cat = cat; view.filter = 'all'; }
+    renderJobs();
+  }
   for (const b of $$('.tabs button')) b.setAttribute('aria-selected', String(b.dataset.tab === name));
-  for (const s of $$('main > section')) s.hidden = s.id !== `tab-${name}`;
+  for (const s of $$('main > section')) s.hidden = s.id !== `tab-${apps ? 'jobs' : name}`;
+  // In Applications, the job-source controls are out of the way.
+  $('#categories').hidden = apps;
+  $('#apps-intro').hidden = !apps;
   scrollTo(0, 0);
 }
 for (const b of $$('.tabs button')) b.onclick = () => showTab(b.dataset.tab);
@@ -69,6 +79,7 @@ function renderJobs() {
   list.sort(view.sort === 'newest' ? newest : (a, b) => b.rel - a.rel || newest(a, b));
   $('#sort').value = view.sort;
   renderPipeline();
+  $('#tabbtn-apps').textContent = `Applications (${jobsFor('saved').length})`;
   // Each segment has its own Indeed search; Saved has none.
   $('#indeed-bar').hidden = view.cat !== 'industry';
   $('#indeed-run').textContent = 'Search Indeed: India industry';
@@ -104,7 +115,7 @@ function stageRow(j) {
 }
 
 function emptyText() {
-  if (view.cat === 'saved') return 'Nothing saved yet. Shortlist a listing, or paste a job from LinkedIn, Indeed or a careers page below.';
+  if (view.cat === 'saved') return 'No applications yet. In Jobs, choose "Shortlist" or "Mark applied" on a listing, or paste a job you found elsewhere below. Each one then appears here with a stage you can change.';
   if (view.cat === 'industry' || view.filter === 'SG' || view.filter === 'EMEA')
     return 'No listings collected for this group yet. Claude adds them when it next collects listings.';
   return 'No listings match this filter.';
@@ -164,7 +175,9 @@ function jobCard(j) {
 
 $('#categories').onclick = (e) => {
   const b = e.target.closest('button');
-  if (b) { view.cat = b.dataset.cat; view.filter = 'all'; renderJobs(); }
+  if (!b) return;
+  if (b.dataset.cat === 'saved') return showTab('apps');
+  view.cat = b.dataset.cat; view.filter = 'all'; renderJobs();
 };
 $('#filters').onclick = (e) => {
   const b = e.target.closest('button');

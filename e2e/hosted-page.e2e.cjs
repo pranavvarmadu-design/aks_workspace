@@ -131,8 +131,7 @@ const DETAIL = `### Research Fellow\n        **Job Id:** JOBSEARCH_1\n\n        
 
   // Pipeline
   await p.click('#mark-applied');
-  await p.click('[data-tab=jobs]');
-  await p.click('[data-cat=saved]');
+  await p.click('[data-tab=apps]');
   const pipe = await p.textContent('#pipeline');
   ok(/1Applied/.test(pipe.replace(/\s+/g, '')), 'pipeline counts the application: ' + pipe.replace(/\s+/g, ' '));
   ok(/since/.test(await p.textContent('.stage-row')), 'stage date shown');
@@ -143,6 +142,8 @@ const DETAIL = `### Research Fellow\n        **Job Id:** JOBSEARCH_1\n\n        
   await p.dispatchEvent('.job textarea[data-act=note]', 'change');
 
   // Indeed only in the India industry tab
+  await p.click('[data-tab=jobs]');
+  ok(await p.locator('#categories').isVisible(), 'Jobs tab shows the job sources again');
   await p.click('[data-cat=university]');
   ok(await p.locator('#indeed-bar').isHidden(), 'no Indeed button in Universities');
   await p.click('[data-cat=industry]');
@@ -150,17 +151,20 @@ const DETAIL = `### Research Fellow\n        **Job Id:** JOBSEARCH_1\n\n        
   await p.click('#indeed-run');
   await p.waitForFunction(() => /^Indeed: .*India industry/.test(document.querySelector('#indeed-msg').textContent), null, { timeout: 60000 });
   ok(/Syngenta Biologicals/.test(await p.textContent('#job-list')), 'India industry result found');
-  await p.click('[data-cat=saved]');
-  ok(await p.locator('#indeed-bar').isHidden(), 'no Indeed button under Saved');
+  await p.click('[data-tab=apps]');
+  ok(await p.locator('#indeed-bar').isHidden() && await p.locator('#categories').isHidden(), 'Applications tab shows only the pipeline');
+  await p.click('[data-tab=jobs]');
 
   // Everything is still there after a reload
   await p.reload();
   await p.waitForSelector('.job');
   ok((await p.inputValue('#candidate-text')).includes('Does not have'), 'skills notes reload');
-  await p.click('[data-cat=saved]');
+  await p.click('[data-tab=apps]');
+  ok(/Applications \(1\)/.test(await p.textContent('#tabbtn-apps')), 'Applications tab shows the count');
   ok(/Open application/.test(await p.textContent('#job-list')), 'application kept');
   ok((await p.inputValue('.job textarea[data-act=note]')) === 'Interview 2 Dec with Dr Rao', 'notes kept');
   ok(/1Interview/.test((await p.textContent('#pipeline')).replace(/\s+/g, '')), 'stage kept');
+  await p.click('[data-tab=jobs]');
   await p.click('[data-cat=industry]');
   ok(/Syngenta Biologicals/.test(await p.textContent('#job-list')), 'Indeed results kept');
   ok(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'no sideways scroll at phone width');

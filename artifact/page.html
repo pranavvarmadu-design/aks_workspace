@@ -96,6 +96,7 @@ select { font: inherit; color: var(--ink); background: var(--surface); border: 1
   <h1>Job Finder</h1>
   <nav class="tabs" role="tablist">
     <button role="tab" id="tabbtn-jobs" data-tab="jobs" aria-selected="true">Jobs</button>
+    <button role="tab" id="tabbtn-apps" data-tab="apps" aria-selected="false">Applications</button>
     <button role="tab" id="tabbtn-builder" data-tab="builder" aria-selected="false">Resume builder</button>
     <button role="tab" id="tabbtn-resume" data-tab="resume" aria-selected="false">My resume</button>
   </nav>
@@ -111,6 +112,7 @@ select { font: inherit; color: var(--ink); background: var(--surface); border: 1
       <button data-cat="industry" aria-pressed="false">India industry <span class="count"></span></button>
       <button data-cat="saved" aria-pressed="false">My applications <span class="count"></span></button>
     </div>
+    <p id="apps-intro" class="small muted" hidden>Every job you shortlist, tailor or apply to. Change a stage from the menu on each card; tap a stage below to filter.</p>
     <div id="pipeline" class="pipeline" hidden></div>
     <div class="chips" id="filters"></div>
     <div class="toolbar" id="indeed-bar">
@@ -124,10 +126,10 @@ select { font: inherit; color: var(--ink); background: var(--surface); border: 1
     <div id="job-list"></div>
 
     <h2>Add a job you found elsewhere</h2>
-    <p class="muted small">For LinkedIn, Indeed or any careers page: copy the posting text and paste it here. It is saved to your Saved tab, ready for tailoring.</p>
+    <p class="muted small">For LinkedIn, Indeed or any careers page: copy the posting text and paste it here. It goes to Applications as Shortlisted, ready for tailoring.</p>
     <label>Link to the posting (optional) <input id="add-url" type="url" placeholder="https://"></label>
     <label>Posting text <textarea id="add-text" rows="5" placeholder="Paste the job title, employer and description"></textarea></label>
-    <button id="add-job">Add to Saved</button>
+    <button id="add-job">Add to Applications</button>
     <span id="add-msg" class="small muted"></span>
   </section>
 
