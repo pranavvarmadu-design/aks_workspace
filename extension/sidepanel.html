@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Job Finder</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <header>
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-tab="jobs" aria-selected="true">Jobs</button>
+      <button role="tab" data-tab="resume" aria-selected="false">Resume builder</button>
+      <button role="tab" data-tab="settings" aria-selected="false">Settings</button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="tab-jobs">
+      <div class="toolbar">
+        <button id="refresh" class="primary">Refresh listings</button>
+        <button id="capture" title="Saves the job on the page you are viewing, including LinkedIn and Indeed">Save job from this page</button>
+      </div>
+      <p id="status" class="muted small"></p>
+      <details id="report" hidden><summary class="small">Source details</summary><ul id="report-list" class="small"></ul></details>
+
+      <div class="segmented" id="categories">
+        <button data-cat="university" aria-pressed="true">Universities <span class="count"></span></button>
+        <button data-cat="industry" aria-pressed="false">India industry <span class="count"></span></button>
+        <button data-cat="saved" aria-pressed="false">Saved <span class="count"></span></button>
+      </div>
+      <div class="chips" id="filters"></div>
+      <input id="search" type="search" placeholder="Filter by title, employer or keyword" aria-label="Filter listings">
+      <div id="job-list"></div>
+    </section>
+
+    <section id="tab-resume" hidden>
+      <details id="master" open>
+        <summary>My resume (master copy)</summary>
+        <p class="muted small">Paste the full resume or CV. Every tailored version is built only from what is written here.</p>
+        <textarea id="resume-text" rows="10" placeholder="Paste resume text here"></textarea>
+        <div class="toolbar">
+          <button id="save-resume">Save resume</button>
+          <button id="extract-profile" title="Uses Claude to set the search keywords from this resume">Set search keywords from resume</button>
+        </div>
+        <p id="resume-msg" class="small muted"></p>
+      </details>
+
+      <h2>Tailor for a job</h2>
+      <div id="target" class="card muted">Pick a listing in the Jobs tab and choose "Tailor resume".</div>
+      <label class="check"><input type="checkbox" id="cover-letter"> Also write a cover letter</label>
+      <label for="notes" class="small">Anything to emphasise or leave out for this application (optional)</label>
+      <textarea id="notes" rows="2"></textarea>
+      <button id="build" class="primary" disabled>Build tailored resume</button>
+      <ol id="steps" class="steps" hidden>
+        <li data-step="analyst">Reading the listing</li>
+        <li data-step="tailor">Tailoring the resume</li>
+        <li data-step="reviewer">Checking every claim against the master copy</li>
+      </ol>
+      <p id="build-msg" class="error small"></p>
+
+      <div id="result" hidden>
+        <div id="review" class="card"></div>
+        <div class="toolbar">
+          <button id="print">Print / save PDF</button>
+          <button id="download-doc">Download Word file</button>
+          <button id="copy-md">Copy as Markdown</button>
+        </div>
+        <div id="preview" class="preview"></div>
+        <div id="letter-wrap" hidden>
+          <h2>Cover letter</h2>
+          <textarea id="letter" rows="12"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-settings" hidden>
+      <h2>Keys</h2>
+      <label>Anthropic API key (for the resume builder)
+        <input id="s-anthropicKey" type="password" autocomplete="off" placeholder="sk-ant-...">
+      </label>
+      <label>Claude model
+        <select id="s-model">
+          <option value="claude-opus-5-5">Claude Opus 5.5 (best quality)</option>
+          <option value="claude-sonnet-5-5">Claude Sonnet 5.5 (cheaper)</option>
+          <option value="claude-haiku-5-5">Claude Haiku 5.5 (cheapest)</option>
+        </select>
+      </label>
+      <label>Adzuna app ID <input id="s-adzunaAppId" autocomplete="off"></label>
+      <label>Adzuna app key <input id="s-adzunaAppKey" type="password" autocomplete="off"></label>
+      <p class="muted small">Adzuna is the licensed job API used for Singapore, EMEA and India. Keys are free at developer.adzuna.com. Not needed here if the backend holds them.</p>
+
+      <h2>Scheduled backend (optional)</h2>
+      <label>Backend URL <input id="s-backendUrl" placeholder="http://localhost:8787"></label>
+      <label>Backend token <input id="s-backendToken" type="password" autocomplete="off"></label>
+      <p class="muted small">With a backend, listings are collected on a schedule there and it can email a digest. Without one, this extension collects them itself every 12 hours while Chrome is open.</p>
+
+      <h2>What to search for</h2>
+      <label>Field keywords (one per line, first four are used)
+        <textarea id="s-fieldKeywords" rows="4"></textarea>
+      </label>
+      <label>University role titles (one per line)
+        <textarea id="s-academicRoles" rows="4"></textarea>
+      </label>
+      <label>India agritech searches (one per line, up to three)
+        <textarea id="s-agritech" rows="3"></textarea>
+      </label>
+      <label>India biotech searches
+        <textarea id="s-biotech" rows="3"></textarea>
+      </label>
+      <label>India pharma searches
+        <textarea id="s-pharma" rows="3"></textarea>
+      </label>
+      <label>Skip listings whose title contains (one per line)
+        <textarea id="s-excludeTerms" rows="2"></textarea>
+      </label>
+      <details>
+        <summary>Sources (advanced, JSON)</summary>
+        <p class="muted small">RSS feeds, Workday university sites, and Greenhouse or Lever company boards.</p>
+        <textarea id="s-sources" rows="14" spellcheck="false" class="mono"></textarea>
+      </details>
+      <button id="save-settings" class="primary">Save settings</button>
+      <p id="settings-msg" class="small muted"></p>
+    </section>
+  </main>
+
+  <script type="module" src="dist/sidepanel.js"></script>
+</body>
+</html>

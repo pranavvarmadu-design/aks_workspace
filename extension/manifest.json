@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "Job Finder and Resume Builder",
+  "version": "0.1.0",
+  "description": "Finds university and India industry jobs from legal sources, and tailors your resume to each listing.",
+  "minimum_chrome_version": "120",
+  "action": { "default_title": "Open Job Finder" },
+  "side_panel": { "default_path": "sidepanel.html" },
+  "background": { "service_worker": "dist/background.js", "type": "module" },
+  "permissions": ["storage", "unlimitedStorage", "sidePanel", "activeTab", "scripting", "alarms", "contextMenus"],
+  "host_permissions": [
+    "https://api.anthropic.com/*",
+    "https://api.adzuna.com/*",
+    "https://www.higheredjobs.com/*",
+    "https://*.myworkdayjobs.com/*",
+    "https://boards-api.greenhouse.io/*",
+    "https://api.lever.co/*",
+    "http://localhost/*"
+  ],
+  "optional_host_permissions": ["https://*/*"]
+}
