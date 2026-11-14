@@ -50,13 +50,17 @@ async function runAgent(settings, agent, userText, { effort = 'medium', maxToken
 export const extractProfile = (settings, resume) =>
   runAgent(settings, AGENTS.profile, AGENTS.profile.user(resume), { effort: 'low', maxTokens: 4000 });
 
+export const analyseJob = (settings, job, candidate) =>
+  runAgent(settings, AGENTS.analyst, AGENTS.analyst.user(job, candidate), { effort: 'medium', maxTokens: 8000 });
+
+// Pass opts.analysis to reuse a screen that already ran.
 export async function buildTailoredResume(settings, resume, job, opts, onStep = () => {}) {
   if (!resume.trim()) throw new Error('Paste your resume in the Resume tab first.');
   onStep('analyst');
-  const analysis = await runAgent(settings, AGENTS.analyst, AGENTS.analyst.user(job), { effort: 'low', maxTokens: 6000 });
+  const analysis = opts.analysis || await analyseJob(settings, job, opts.candidate);
   onStep('tailor');
   const tailored = await runAgent(settings, AGENTS.tailor, AGENTS.tailor.user(resume, job, analysis, opts), { effort: 'high', maxTokens: 32000 });
   onStep('reviewer');
-  const review = await runAgent(settings, AGENTS.reviewer, AGENTS.reviewer.user(resume, tailored, analysis), { effort: 'medium', maxTokens: 8000 });
+  const review = await runAgent(settings, AGENTS.reviewer, AGENTS.reviewer.user(resume, tailored, analysis, opts.candidate), { effort: 'medium', maxTokens: 8000 });
   return { analysis, resume: tailored, review, builtAt: new Date().toISOString() };
 }

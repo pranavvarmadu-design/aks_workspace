@@ -28,7 +28,7 @@ Chrome may show a banner about developer-mode extensions when it starts. That is
 ## First use
 
 1. **Settings** tab: paste the API key into "Anthropic API key". Add the Adzuna ID and key if you have them. Click **Save settings**.
-2. **Resume builder** tab: paste her full resume or CV, click **Save resume**, then **Set search keywords from resume**.
+2. **Resume builder** tab: paste her full resume or CV. Below it, paste `skills-and-constraints.txt` into **Skills and constraints**: what she operates herself, what she only prepares samples for, what she doesn't have, and her visa status. Click **Save resume**, then **Set search keywords from resume**.
 3. **Jobs** tab: click **Refresh listings**. The first search takes a minute or two.
 
 ## Everyday use
@@ -36,7 +36,8 @@ Chrome may show a banner about developer-mode extensions when it starts. That is
 - **Universities** tab: US postdoc listings, refreshed automatically every 12 hours while Chrome is open.
 - **India industry** tab: agritech, biotech and pharma roles (needs the Adzuna key).
 - **LinkedIn, Indeed or any careers page:** open the job, then click **Save job from this page** in the panel, or right-click the page and choose **Save this job to Job Finder**. It appears under **Saved**.
-- **Tailor resume** on any listing builds a version for that job, checks every claim against her master resume, and flags anything it couldn't confirm. Download it as a Word file, or use **Print / save PDF**.
+- **Job cards** flag "No visa sponsorship" and techniques the posting mentions that she lacks, once the posting text is available (always for jobs saved from a page).
+- **Check fit and build resume** first screens the listing against her skills notes. If a required technique is one she lacks, or a US post rules out sponsorship, it stops and says why; **Build anyway** overrides. Otherwise it builds a version for that job, checks every claim against her master resume, and flags anything it couldn't confirm. Download it as a Word file, or use **Print / save PDF**.
 
 Her resume and the API key stay in her Chrome on her computer. The resume and the job text are sent to Claude only when she builds a tailored resume.
 

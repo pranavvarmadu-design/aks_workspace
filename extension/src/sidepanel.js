@@ -1,7 +1,8 @@
 import { MARKETS, SECTORS } from '../../core/config.js';
 import { esc, resumeToHtml, resumeToMarkdown } from '../../core/resume.js';
 import { load, save } from './store.js';
-import { buildTailoredResume, extractProfile } from './tailor.js';
+import { analyseJob, buildTailoredResume, extractProfile } from './tailor.js';
+import { screenJob } from '../../core/screen.js';
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -70,6 +71,15 @@ function emptyText() {
   return 'No listings match. Try another filter, or adjust the search keywords in Settings.';
 }
 
+function screenTags(j) {
+  const s = screenJob(j, state.settings.profile);
+  return [
+    s.sponsorship === 'no' ? '<span class="tag bad">No visa sponsorship</span>' : s.sponsorship === 'yes' ? '<span class="tag good">Sponsorship mentioned</span>' : '',
+    s.blockers.length ? `<span class="tag bad" title="Check whether these are required">Mentions ${esc(s.blockers.slice(0, 3).join(', '))}</span>` : '',
+    s.strengths.length ? `<span class="tag good">${esc(s.strengths.slice(0, 3).join(', '))}</span>` : '',
+  ];
+}
+
 function jobCard(j) {
   const st = stateOf(j);
   const tags = [
@@ -78,6 +88,7 @@ function jobCard(j) {
     j.category === 'university' ? `<span class="tag">${esc(MARKETS[j.market]?.label || j.market || '')}</span>` : '',
     j.category === 'industry' ? `<span class="tag">${esc(SECTORS[j.sector]?.label || '')}</span>` : '',
     j.score != null ? `<span class="tag ${j.score >= 60 ? 'good' : ''}">Match ${j.score}</span>` : '',
+    ...screenTags(j),
     state.tailored[j.id] ? '<span class="tag good">Resume ready</span>' : '',
     `<span class="tag">${esc(j.source)}</span>`,
   ].join('');
@@ -187,9 +198,20 @@ function setTarget(j) {
     (j.description ? '' : '<br><span class="small error">This listing has no description. Open it, then use "Save job from this page" for a better result.</span>');
   $('#build').disabled = false;
   $('#build-msg').textContent = '';
+  $('#screen-stop').hidden = true;
+  view.pendingAnalysis = null;
   $('#master').open = !state.resume;
   showResult(state.tailored[j.id]);
   showTab('resume');
+}
+
+const VERDICT = { apply: 'Worth applying', borderline: 'Borderline', skip: 'Advised: skip' };
+const SPONSOR = { offered: 'Visa sponsorship offered', not_offered: 'No visa sponsorship', not_stated: 'Sponsorship not stated: check before applying', not_applicable: '' };
+function screenHtml(sc) {
+  if (!sc) return '';
+  const lacks = sc.requiredSheLacks?.length ? `<br>Required and not in your skills: ${esc(sc.requiredSheLacks.join(', '))}` : '';
+  const sp = SPONSOR[sc.sponsorship] ? `<br>${esc(SPONSOR[sc.sponsorship])}` : '';
+  return `<div class="verdict ${esc(sc.verdict)}"><strong>${esc(VERDICT[sc.verdict] || sc.verdict)}.</strong> ${esc(sc.reason)}${sp}${lacks}</div>`;
 }
 
 function showResult(t) {
@@ -198,6 +220,7 @@ function showResult(t) {
   const r = t.review;
   const list = (title, items) => items?.length ? `<strong>${title}</strong><ul>${items.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '';
   $('#review').innerHTML =
+    screenHtml(t.analysis.screen) +
     `<h3>Fit for this role: ${Number(r.matchScore) || 0}/100</h3>` +
     (r.unsupportedClaims?.length
       ? `<div class="warn"><strong>Check before sending.</strong> The reviewer could not find these in your master resume:<ul>${r.unsupportedClaims.map((c) => `<li>${esc(c.claim)} <span class="small">(${esc(c.reason)})</span></li>`).join('')}</ul></div>`
@@ -210,11 +233,12 @@ function showResult(t) {
   $('#letter').value = t.resume.coverLetter || '';
 }
 
-$('#build').onclick = async () => {
+async function runBuild(force) {
   const j = view.target;
   const btn = $('#build');
   btn.disabled = true;
   $('#build-msg').textContent = '';
+  $('#screen-stop').hidden = true;
   $('#steps').hidden = false;
   const order = ['analyst', 'tailor', 'reviewer'];
   const mark = (step) => {
@@ -223,9 +247,21 @@ $('#build').onclick = async () => {
       li.className = i < cur ? 'done' : i === cur ? 'active' : '';
     }
   };
+  const opts = { coverLetter: $('#cover-letter').checked, notes: $('#notes').value.trim(), candidate: state.candidate };
   try {
-    const t = await buildTailoredResume(state.settings, state.resume, j,
-      { coverLetter: $('#cover-letter').checked, notes: $('#notes').value.trim() }, mark);
+    if (!state.resume.trim()) throw new Error('Paste your resume in the Resume builder tab first.');
+    mark('analyst');
+    opts.analysis = (force && view.pendingAnalysis) || await analyseJob(state.settings, j, state.candidate);
+    const sc = opts.analysis.screen;
+    if (!force && sc && sc.verdict === 'skip') {
+      view.pendingAnalysis = opts.analysis;
+      $('#screen-stop').innerHTML = `<h3>Probably not worth applying</h3>${screenHtml(sc)}<p class="small muted">Nothing has been tailored yet. You can still build it.</p><button id="build-anyway">Build anyway</button>`;
+      $('#screen-stop').hidden = false;
+      $('#build-anyway').onclick = () => runBuild(true);
+      return;
+    }
+    const t = await buildTailoredResume(state.settings, state.resume, j, opts, mark);
+    view.pendingAnalysis = null;
     state.tailored[j.id] = t;
     await save({ tailored: state.tailored });
     mark('finished');
@@ -233,10 +269,12 @@ $('#build').onclick = async () => {
     renderJobs();
   } catch (e) {
     $('#build-msg').textContent = e.message;
+  } finally {
+    $('#steps').hidden = true;
+    btn.disabled = false;
   }
-  $('#steps').hidden = true;
-  btn.disabled = false;
-};
+}
+$('#build').onclick = () => runBuild(false);
 
 const currentResume = () => state.tailored[view.target?.id]?.resume;
 const fileName = (ext) => `${currentResume().name} - ${view.target.company || view.target.title}`.replace(/[^\w .-]+/g, '').slice(0, 80) + ext;
@@ -261,8 +299,9 @@ $('#copy-md').onclick = async (e) => {
 
 $('#save-resume').onclick = async () => {
   state.resume = $('#resume-text').value;
-  await save({ resume: state.resume });
-  $('#resume-msg').textContent = 'Resume saved in this browser.';
+  state.candidate = $('#candidate-text').value;
+  await save({ resume: state.resume, candidate: state.candidate });
+  $('#resume-msg').textContent = 'Resume and skills notes saved in this browser.';
 };
 
 $('#extract-profile').onclick = async (e) => {
@@ -272,7 +311,7 @@ $('#extract-profile').onclick = async (e) => {
     state.resume = $('#resume-text').value;
     await save({ resume: state.resume });
     if (!state.resume.trim()) throw new Error('Paste the resume first.');
-    const p = await extractProfile(state.settings, state.resume);
+    const p = await extractProfile(state.settings, state.resume + (state.candidate ? `\n\nSkills and constraints:\n${state.candidate}` : ''));
     state.settings.profile = { ...state.settings.profile, ...p };
     await save({ settings: state.settings });
     await send({ type: 'pushConfig' }).catch(() => {});
@@ -331,6 +370,7 @@ $('#save-settings').onclick = async () => {
 (async function init() {
   state = await load();
   $('#resume-text').value = state.resume;
+  $('#candidate-text').value = state.candidate;
   fillSettings();
   renderStatus();
   renderJobs();
@@ -338,3 +378,11 @@ $('#save-settings').onclick = async () => {
   save({ seenAt: new Date().toISOString() }).then(() => send({ type: 'badge' })).catch(() => {});
   if (!state.status) showTab(state.resume ? 'jobs' : 'resume');
 })();
+
+// Keep the master resume and skills notes saved as she edits them.
+for (const [id, key] of [['#resume-text', 'resume'], ['#candidate-text', 'candidate']])
+  $(id).addEventListener('input', () => {
+    state[key] = $(id).value;
+    clearTimeout($(id)._t);
+    $(id)._t = setTimeout(() => save({ [key]: state[key] }), 400);
+  });

@@ -39,6 +39,8 @@
         <summary>My resume (master copy)</summary>
         <p class="muted small">Paste the full resume or CV. Every tailored version is built only from what is written here.</p>
         <textarea id="resume-text" rows="10" placeholder="Paste resume text here"></textarea>
+        <label for="candidate-text">Skills and constraints: what you operate yourself, what you prepare samples for but do not operate, what you do not have, and visa status. Claude treats this as the truth when screening jobs and tailoring.</label>
+        <textarea id="candidate-text" rows="8" placeholder="Operates herself: ...&#10;Prepares and interprets, does not operate: ...&#10;Does not have: ...&#10;Visa: no work authorisation"></textarea>
         <div class="toolbar">
           <button id="save-resume">Save resume</button>
           <button id="extract-profile" title="Uses Claude to set the search keywords from this resume">Set search keywords from resume</button>
@@ -51,9 +53,10 @@
       <label class="check"><input type="checkbox" id="cover-letter"> Also write a cover letter</label>
       <label for="notes" class="small">Anything to emphasise or leave out for this application (optional)</label>
       <textarea id="notes" rows="2"></textarea>
-      <button id="build" class="primary" disabled>Build tailored resume</button>
+      <button id="build" class="primary" disabled>Check fit and build resume</button>
+      <div id="screen-stop" class="card" hidden></div>
       <ol id="steps" class="steps" hidden>
-        <li data-step="analyst">Reading the listing</li>
+        <li data-step="analyst">Screening the listing against your skills</li>
         <li data-step="tailor">Tailoring the resume</li>
         <li data-step="reviewer">Checking every claim against the master copy</li>
       </ol>

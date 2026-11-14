@@ -25,7 +25,7 @@ export const SECTORS = {
 export const DEFAULT_PROFILE = {
   // Field keywords drive every search. Replace them from her resume
   // (Settings -> "Extract keywords from resume").
-  fieldKeywords: ['plant biotechnology', 'molecular biology', 'agriculture', 'biochemistry'],
+  fieldKeywords: ['plant anatomy', 'pollination biology', 'floral biology', 'plant reproductive biology'],
   // Any-of role terms used for university searches.
   academicRoles: ['postdoctoral', 'postdoc', 'postdoctoral fellow', 'postdoctoral research associate', 'postdoctoral scholar'],
   // Up to three search phrases per India sector.

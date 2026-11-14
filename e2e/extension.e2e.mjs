@@ -32,7 +32,7 @@ fs.rmSync(path.join(DATA, 'config.json'), { force: true });
 const backend = spawn('node', [path.join(ROOT, 'backend/server.js')], { env: { ...process.env, PORT: '8799', DATA_DIR: DATA, API_TOKEN: 'tok', COLLECT_INTERVAL_HOURS: '9999' }, stdio: 'inherit' });
 
 // a job page like the ones she would capture
-const page1 = `<html><head><title>Job</title><script type="application/ld+json">${JSON.stringify({ '@type': 'JobPosting', title: 'Senior Scientist, Crop Genomics', hiringOrganization: { name: 'GreenGene Pvt Ltd' }, jobLocation: { address: { addressLocality: 'Pune', addressCountry: 'IN' } }, description: '<p>Lead genomics for seed traits. Requires PCR, CRISPR and Python.</p>', datePosted: '2026-11-10' })}</script></head><body><h1>Senior Scientist</h1></body></html>`;
+const page1 = `<html><head><title>Job</title><script type="application/ld+json">${JSON.stringify({ '@type': 'JobPosting', title: 'Senior Scientist, Crop Genomics', hiringOrganization: { name: 'GreenGene Pvt Ltd' }, jobLocation: { address: { addressLocality: 'Pune', addressCountry: 'IN' } }, description: '<p>Lead genomics for seed traits. Requires PCR, CRISPR and Python. Applicants must be authorized to work in the US without sponsorship.</p>', datePosted: '2026-11-10' })}</script></head><body><h1>Senior Scientist</h1></body></html>`;
 const web = http.createServer((q, r) => r.end(page1)).listen(8798);
 
 const ctx = await chromium.launchPersistentContext(path.join(S, 'profile'), {
@@ -45,7 +45,7 @@ const extId = sw.url().split('/')[2];
 // mock the Claude API with a streamed response per agent
 const tailoredDoc = { name: 'Test Person', headline: 'Plant molecular biologist', contact: 'test@example.com', summary: 'Tailored summary for crop genomics.', sections: [{ title: 'Experience', entries: [{ heading: 'Research Associate', subheading: 'Some Institute', dates: '2021-2025', bullets: ['Ran PCR and CRISPR edits in rice.'] }] }], coverLetter: 'Dear team, ...' };
 const replies = {
-  hiring: { roleSummary: 'x', documentStyle: 'industry_resume', mustHave: ['PCR'], niceToHave: [], keywords: ['CRISPR'], responsibilities: [], applicationNotes: 'Two referees' },
+  hiring: { roleSummary: 'x', documentStyle: 'industry_resume', mustHave: ['PCR'], niceToHave: [], keywords: ['CRISPR'], responsibilities: [], applicationNotes: 'Two referees', screen: { sponsorship: 'not_offered', requiredSheLacks: ['CRISPR'], strengthsMatched: [], coreOutput: 'sequence data', verdict: 'skip', reason: 'CRISPR is required.' } },
   tailor: tailoredDoc,
   audit: { matchScore: 78, unsupportedClaims: [{ claim: 'Python', reason: 'not in master resume' }], coveredRequirements: ['PCR'], gaps: ['Python'], suggestions: ['Have you used Python?'] },
   read: { fieldKeywords: ['crop genomics', 'plant molecular biology', 'CRISPR', 'rice'], academicRoles: ['postdoctoral'], sectorQueries: { agritech: ['seed scientist'], biotech: [], pharma: [] }, skills: ['PCR'], seniority: 'early career' },
@@ -108,24 +108,34 @@ await p.evaluate(() => document.querySelector('#capture').click());
 await p.waitForFunction(() => /Saved "Senior Scientist, Crop Genomics"/.test(document.querySelector('#status').textContent));
 ok(await p.locator('.job h3').first().textContent() === 'Senior Scientist, Crop Genomics', 'captured job appears under Saved');
 ok(/GreenGene Pvt Ltd · Pune, IN/.test(await p.locator('.job .meta').first().textContent()), 'captured employer and location');
+const capTags = await p.locator('.job .tags').first().textContent();
+ok(/No visa sponsorship/.test(capTags) && /crispr/i.test(capTags), 'card flags sponsorship and blockers: ' + capTags);
 
 // resume: keywords from resume, then tailor
 await p.bringToFront();
 await p.click('.job [data-act=tailor]');
 await p.fill('#resume-text', 'Test Person\nResearch Associate, Some Institute 2021-2025\nPCR, CRISPR in rice');
+await p.fill('#candidate-text', 'Does not have: CRISPR, cloning. Visa: no work authorisation.');
 await p.click('#extract-profile');
 await p.waitForFunction(() => /Search keywords updated: crop genomics/.test(document.querySelector('#resume-msg').textContent));
 ok(JSON.parse(fs.readFileSync(path.join(DATA, 'config.json'))).profile.fieldKeywords[0] === 'crop genomics', 'resume keywords reach the backend');
 await p.check('#cover-letter');
 await p.click('#build');
+await p.waitForSelector('#screen-stop:not([hidden])');
+ok(/Probably not worth applying/.test(await p.textContent('#screen-stop')) && /CRISPR is required/.test(await p.textContent('#screen-stop')), 'skip verdict stops the build');
+ok(await p.locator('#result').isHidden(), 'nothing tailored before confirming');
+await p.click('#build-anyway');
 await p.waitForSelector('#result:not([hidden])');
+ok(apiBodies.filter((b) => b.body.system.startsWith('You are a hiring')).length === 1, 'screen is not re-run after Build anyway');
+ok(apiBodies.find((b) => b.body.system.startsWith('You are a hiring')).body.messages[0].content.includes('Does not have: CRISPR'), 'skills notes reach the screen');
+ok(/Advised: skip/.test(await p.textContent('#review')), 'verdict shown with the result');
 ok(/Fit for this role: 78\/100/.test(await p.textContent('#review')), 'review score shown');
 ok(/could not find these.*Python/s.test(await p.textContent('#review')), 'unsupported claim flagged');
 ok(/Ran PCR and CRISPR edits in rice/.test(await p.textContent('#preview')), 'tailored resume preview');
 ok((await p.inputValue('#letter')).startsWith('Dear team'), 'cover letter shown');
 const t = apiBodies.find((b) => b.body.system.startsWith('You tailor'));
 ok(t.body.model === 'claude-opus-5-5' && t.body.stream === true && t.body.output_config.format.type === 'json_schema' && t.body.fallbacks === 'default', 'Claude request shape');
-ok(t.body.messages[0].content.includes('Lead genomics for seed traits') === false && apiBodies.find((b) => b.body.system.startsWith('You are a hiring')).body.messages[0].content.includes('Lead genomics for seed traits'), 'job description goes to the analyst');
+ok(t.body.messages[0].content.includes('<candidate>') && t.body.messages[0].content.includes('Lead genomics for seed traits') === false && apiBodies.find((b) => b.body.system.startsWith('You are a hiring')).body.messages[0].content.includes('Lead genomics for seed traits'), 'job description goes to the analyst');
 ok(t.headers.authorization === 'Bearer sk-ant-test' && /server-side-fallback-2026-07-01/.test(t.headers['anthropic-beta']), 'auth and beta headers');
 await p.screenshot({ path: path.join(S, 'resume.png'), fullPage: true });
 

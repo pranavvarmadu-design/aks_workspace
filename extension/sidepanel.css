@@ -68,3 +68,9 @@ details { margin: 8px 0; } summary { cursor: pointer; font-weight: 600; }
 .preview .contact, .preview .headline { color: #444; font-size: 11px; }
 .preview .row { display: flex; justify-content: space-between; gap: 8px; } .preview .heading { font-weight: bold; }
 .preview ul { margin: 2px 0 6px 16px; padding: 0; }
+
+.tag.bad { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+#screen-stop { border-color: var(--warn); }
+#screen-stop h3 { margin: 0 0 6px; font-size: 14px; color: var(--warn); }
+.verdict { border-radius: 6px; padding: 8px; margin-bottom: 8px; background: var(--accent-soft); color: var(--accent); }
+.verdict.borderline, .verdict.skip { background: var(--warn-soft); color: var(--warn); }

@@ -16,6 +16,7 @@ export const DEFAULT_SETTINGS = {
 const DEFAULTS = {
   settings: DEFAULT_SETTINGS,
   resume: '',
+  candidate: '', // her own skills and constraints notes
   jobs: [], // collected listings
   captured: [], // jobs she saved from pages she was viewing
   jobState: {}, // id -> 'saved' | 'applied' | 'hidden'
