@@ -57,7 +57,14 @@ label.check input { width: auto; }
 .tags, .actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .tag { font-size: 12px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
 .tag.good { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
-.tag.state { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+.tag.state, .tag.bad { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+.tag.warn { color: var(--warn); border-color: var(--warn); }
+.tag.rel-high { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.tag.rel-medium { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+.toolbar { align-items: center; }
+.listbar { display: flex; gap: 8px; }
+.listbar input { flex: 1; min-width: 0; }
+select { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; }
 .actions button { font-size: 13px; padding: 4px 10px; }
 .empty { text-align: center; color: var(--muted); padding: 32px 12px; }
 .steps { padding-left: 20px; color: var(--muted); } .steps li.active { color: var(--ink); font-weight: 600; } .steps li.done { color: var(--accent); }
@@ -85,13 +92,20 @@ label.check input { width: auto; }
 
   <section id="tab-jobs">
     <p id="status" class="muted small">Loading listings...</p>
+    <div class="toolbar">
+      <button id="indeed-run">Search Indeed</button>
+      <span id="indeed-msg" class="small muted" role="status"></span>
+    </div>
     <div class="segmented" id="categories">
       <button data-cat="university" aria-pressed="true">Universities <span class="count"></span></button>
       <button data-cat="industry" aria-pressed="false">India industry <span class="count"></span></button>
       <button data-cat="saved" aria-pressed="false">Saved <span class="count"></span></button>
     </div>
     <div class="chips" id="filters"></div>
-    <input id="search" type="search" placeholder="Filter by title, employer or keyword" aria-label="Filter listings">
+    <div class="listbar">
+      <input id="search" type="search" placeholder="Filter by title, employer or keyword" aria-label="Filter listings">
+      <select id="sort" aria-label="Sort listings"><option value="relevance">Most relevant</option><option value="newest">Newest</option></select>
+    </div>
     <div id="job-list"></div>
 
     <h2>Add a job you found elsewhere</h2>

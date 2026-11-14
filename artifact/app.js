@@ -2,15 +2,17 @@
 // Listings live in the page's shared database (Claude collects them);
 // the resume and saved jobs live in the viewer's private space.
 import { MARKETS, SECTORS, DEFAULT_PROFILE } from '../core/config.js';
-import { scoreJob } from '../core/collect.js';
+import { scoreJob, finalise } from '../core/collect.js';
+import { screenJob, visaStatus, relevance, relevanceLevel } from '../core/screen.js';
+import { parseIndeedList, parseIndeedDetail, indeedSearches, indeedToRaw, resultText } from '../core/indeed.js';
 import { AGENTS } from '../core/prompts.js';
 import { esc, resumeToHtml, resumeToMarkdown } from '../core/resume.js';
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
-const view = { cat: 'university', filter: 'all', query: '', target: null };
+const view = { sort: 'relevance', cat: 'university', filter: 'all', query: '', target: null };
 const state = { jobs: [], captured: [], jobState: {}, tailored: {}, descriptions: {}, resume: '', profile: DEFAULT_PROFILE, status: null };
-let db, mine, sample, downloads;
+let db, mine, sample, downloads, mcp;
 
 const notice = (msg) => { $('#notice').hidden = !msg; $('#notice').textContent = msg || ''; };
 
@@ -23,11 +25,12 @@ for (const b of $$('.tabs button')) b.onclick = () => showTab(b.dataset.tab);
 
 // ---------- jobs ----------
 
-const allJobs = () => [...state.captured, ...state.jobs];
+const withText = (j) => (state.descriptions[j.id] ? { ...j, description: state.descriptions[j.id] } : j);
+const allJobs = () => [...state.captured, ...state.jobs].map(withText);
 const stateOf = (j) => state.jobState[j.id];
 const jobsFor = (cat) => cat === 'saved'
   ? allJobs().filter((j) => ['saved', 'applied'].includes(stateOf(j)))
-  : state.jobs.filter((j) => j.category === cat && stateOf(j) !== 'hidden');
+  : state.jobs.map(withText).filter((j) => j.category === cat && stateOf(j) !== 'hidden');
 
 function ago(d) {
   if (!d) return '';
@@ -52,7 +55,10 @@ function renderJobs() {
       if (key !== view.filter) return false;
     }
     return !q || `${j.title} ${j.company} ${j.location} ${j.description || ''} ${j.feed || ''}`.toLowerCase().includes(q);
-  });
+  }).map((j) => ({ ...j, rel: relevance(j, state.profile, j.score || 0) }));
+  const newest = (a, b) => String(b.postedAt || b.firstSeen).localeCompare(String(a.postedAt || a.firstSeen));
+  list.sort(view.sort === 'newest' ? newest : (a, b) => b.rel - a.rel || newest(a, b));
+  $('#sort').value = view.sort;
   $('#job-list').innerHTML = list.length ? list.slice(0, 200).map(jobCard).join('') : `<div class="empty">${emptyText()}</div>`;
 }
 
@@ -63,6 +69,29 @@ function emptyText() {
   return 'No listings match this filter.';
 }
 
+const VISA_TAG = {
+  yes: '<span class="tag good">Visa: Yes</span>',
+  no: '<span class="tag bad">Visa: No</span>',
+  not_mentioned: '<span class="tag warn">Visa: Not mentioned</span>',
+  unchecked: '<span class="tag">Visa: not checked</span>',
+};
+
+function screenTags(j) {
+  const s = screenJob(j, state.profile);
+  return [
+    ...(s.india ? [
+      s.india.sales ? '<span class="tag bad">Sales or marketing role</span>' : '',
+      s.india.years != null && s.india.years >= 2 ? `<span class="tag bad">Asks ${s.india.years}+ years experience</span>` : '',
+      s.india.industryExperience ? '<span class="tag bad">Wants industry experience</span>' : '',
+      s.india.degrees.length ? `<span class="tag bad">Asks for ${esc(s.india.degrees.slice(0, 2).join(' / '))}</span>` : '',
+      s.india.phd ? '<span class="tag good">PhD valued</span>' : '',
+      s.india.ncr ? '<span class="tag good">Delhi NCR</span>' : '',
+    ] : []),
+    s.blockers.length ? `<span class="tag bad">Mentions ${esc(s.blockers.slice(0, 3).join(', '))}</span>` : '',
+    s.strengths.length ? `<span class="tag good">${esc(s.strengths.slice(0, 3).join(', '))}</span>` : '',
+  ];
+}
+
 function jobCard(j) {
   const st = stateOf(j);
   const tags = [
@@ -70,7 +99,10 @@ function jobCard(j) {
     j.category === 'university' ? `<span class="tag">${esc(MARKETS[j.market]?.label || j.market || '')}</span>` : '',
     j.category === 'industry' ? `<span class="tag">${esc(SECTORS[j.sector]?.label || '')}</span>` : '',
     j.feed ? `<span class="tag">${esc(j.feed)}</span>` : '',
-    j.score ? `<span class="tag ${j.score >= 50 ? 'good' : ''}">Match ${j.score}</span>` : '',
+    `<span class="tag rel-${relevanceLevel(j.rel ?? 0).toLowerCase()}" title="Relevance ${j.rel ?? 0}/100">${relevanceLevel(j.rel ?? 0)} relevance</span>`,
+    VISA_TAG[visaStatus(j)] || '',
+    ...screenTags(j),
+    j.salary ? `<span class="tag">${esc(j.salary)}</span>` : '',
     state.tailored[j.id] ? '<span class="tag good">Resume ready</span>' : '',
     `<span class="tag">${esc(j.source || 'added by you')}</span>`,
   ].join('');
@@ -97,6 +129,68 @@ $('#filters').onclick = (e) => {
   if (b) { view.filter = b.dataset.filter; renderJobs(); }
 };
 $('#search').oninput = (e) => { view.query = e.target.value; renderJobs(); };
+$('#sort').onchange = (e) => { view.sort = e.target.value; renderJobs(); };
+
+// ---------- Indeed, through the viewer's own Indeed connector ----------
+
+const INDEED_STOP = {
+  server_not_connected: 'Connect Indeed in claude.ai Settings → Connectors, then try again.',
+  needs_reauth: 'Your Indeed connection has expired. Reconnect Indeed in claude.ai Settings → Connectors.',
+  selection_required: 'Choose which Indeed connection to use in the prompt claude.ai shows, then try again.',
+  not_in_manifest: 'Indeed is turned off for this page. Allow it in the page permissions, then try again.',
+  approval_required: 'This search needs your approval. Click "Search Indeed" again and allow it when claude.ai asks.',
+  blocked_by_policy: 'Your organisation does not allow Indeed here.',
+};
+const indeedMsg = (t) => { $('#indeed-msg').textContent = t; };
+
+async function runIndeed() {
+  const btn = $('#indeed-run');
+  if (!mcp) return indeedMsg('Indeed is available when this page is open on claude.ai with Indeed connected.');
+  btn.disabled = true;
+  const raw = [];
+  let stop = null;
+  const searches = indeedSearches(state.profile);
+  try {
+    for (const [i, s] of searches.entries()) {
+      indeedMsg(`Searching Indeed (${i + 1} of ${searches.length}): ${s.search}, ${s.location}`);
+      try {
+        const r = await mcp.callTool('Indeed', 'search_jobs', { search: s.search, location: s.location, country_code: s.country });
+        raw.push(...parseIndeedList(resultText(r)).map((j) => indeedToRaw(j, s)));
+      } catch (e) {
+        if (INDEED_STOP[e?.code]) { stop = INDEED_STOP[e.code]; break; }
+        // one failed search does not stop the rest
+      }
+    }
+    // Same filters as every other source; then read the full posting for the most relevant.
+    const found = finalise(raw, state.profile).map((j) => ({ ...j, firstSeen: new Date().toISOString() }));
+    const ranked = found.map((j) => ({ j, r: relevance(j, state.profile, j.score) })).sort((a, b) => b.r - a.r).map((x) => x.j);
+    let n = 0;
+    for (const j of ranked) {
+      if (stop || n >= 12) break;
+      indeedMsg(`Reading postings for visa and requirements (${n + 1} of ${Math.min(12, ranked.length)})`);
+      n++;
+      try {
+        j.description = parseIndeedDetail(resultText(await mcp.callTool('Indeed', 'get_job_details', { job_id: j.jobId }))).slice(0, 20000);
+      } catch (e) {
+        if (INDEED_STOP[e?.code]) stop = INDEED_STOP[e.code];
+      }
+    }
+    for (const j of found) {
+      const { jobId, ...keep } = j;
+      const i = state.jobs.findIndex((x) => x.id === j.id);
+      if (i >= 0) state.jobs[i] = { ...state.jobs[i], ...keep, description: keep.description || state.jobs[i].description };
+      else state.jobs.push(keep);
+      put(`i_${j.id.replace(/[^A-Za-z0-9_-]/g, '_')}`, keep);
+    }
+    rescore();
+    renderJobs();
+    const u = found.filter((j) => j.category === 'university').length, ind = found.length - u;
+    indeedMsg(stop || `Indeed: ${u} US postdoc and ${ind} India industry listings matched her profile (from ${raw.length} results).`);
+  } finally {
+    btn.disabled = false;
+  }
+}
+$('#indeed-run').onclick = () => runIndeed();
 
 $('#job-list').onclick = async (e) => {
   const b = e.target.closest('button[data-act]');
@@ -117,7 +211,7 @@ $('#job-list').onclick = async (e) => {
 };
 
 function rescore() {
-  state.jobs = state.jobs.map((j) => ({ ...j, score: scoreJob({ title: `${j.title} ${j.feed || ''}`, description: j.description || '' }, state.profile) }))
+  state.jobs = state.jobs.map((j) => ({ ...j, score: scoreJob({ title: j.title, feed: j.feed, description: j.description || '' }, state.profile) }))
     .sort((a, b) => b.score - a.score || String(b.postedAt).localeCompare(String(a.postedAt)));
 }
 
@@ -356,8 +450,9 @@ $('#extract-profile').onclick = async (e) => {
 (async function init() {
   renderJobs();
   const use = (name) => window.claude?.use ? window.claude.use(name) : Promise.resolve(null);
-  const [d, user, s, dl] = await Promise.all(['db', 'user', 'sample', 'downloads'].map(use));
-  db = d; sample = s; downloads = dl;
+  const [d, user, s, dl, m] = await Promise.all(['db', 'user', 'sample', 'downloads', 'mcp'].map(use));
+  db = d; sample = s; downloads = dl; mcp = m;
+  if (!mcp) indeedMsg('Indeed search works when this page is open on claude.ai with the Indeed connector added.');
   if (!db) {
     $('#status').textContent = '';
     return notice('Listings and saved data are unavailable in this view. Open this page on claude.ai while signed in.');
@@ -384,6 +479,7 @@ $('#extract-profile').onclick = async (e) => {
       else if (x.id.startsWith('t_')) state.tailored[x.id.slice(2)] = v;
       else if (x.id.startsWith('d_')) state.descriptions[x.id.slice(2)] = v.text || '';
       else if (x.id.startsWith('c_')) state.captured.push(v);
+      else if (x.id.startsWith('i_') && !state.jobs.some((j) => j.id === v.id)) state.jobs.push(v);
     }
     state.captured.sort((a, b) => String(b.firstSeen).localeCompare(String(a.firstSeen)));
   } catch (e) {
