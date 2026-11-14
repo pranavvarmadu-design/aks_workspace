@@ -191,3 +191,57 @@ export async function leverCollect(fetchFn, board) {
 }
 
 export { job as normaliseJob, UNIVERSITY_RE };
+
+// ---- jobs.ac.uk: the UK academic jobs board (Oxford, Cambridge, John Innes, Kew and most UK
+// universities and institutes, plus some in Europe). Its robots.txt allows search pages. ----
+
+export const jobsAcUkUrl = (keyword) =>
+  `https://www.jobs.ac.uk/search/?keywords=${encodeURIComponent(keyword)}&sortOrder=1&pageSize=100`;
+
+const MONTHS = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+// "05 Nov" -> ISO date. A date more than aheadDays after today belongs to last year
+// (a posting date is never in the future; a closing date can be months ahead).
+export function dayMonthToIso(s, today = new Date(), aheadDays = 7) {
+  const m = String(s).trim().match(/^(\d{1,2})\s+([A-Za-z]{3})/);
+  if (!m || !(m[2].toLowerCase() in MONTHS)) return '';
+  let d = new Date(Date.UTC(today.getUTCFullYear(), MONTHS[m[2].toLowerCase()], Number(m[1])));
+  if (d - today > aheadDays * 864e5) d = new Date(Date.UTC(today.getUTCFullYear() - 1, d.getUTCMonth(), d.getUTCDate()));
+  return d.toISOString().slice(0, 10);
+}
+// Closing dates are in the future: a day and month already well past means next year.
+export function closingToIso(s, today = new Date()) {
+  const iso = dayMonthToIso(s, today, 366);
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (today - d > 30 * 864e5) d.setUTCFullYear(d.getUTCFullYear() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+export function parseJobsAcUk(html, today = new Date()) {
+  const out = [];
+  const blocks = String(html).split(/<div class="j-search-result__result\b/).slice(1);
+  for (const b of blocks) {
+    const link = b.match(/<a href="(https:\/\/www\.jobs\.ac\.uk\/job\/([A-Z0-9]+)\/[^"]*)">\s*([\s\S]*?)\s*<\/a>/);
+    if (!link) continue;
+    const text = (re) => stripHtml((b.match(re) || [])[1] || '').replace(/\s+/g, ' ').trim();
+    const department = text(/j-search-result__department">([\s\S]*?)<\/div>/);
+    const company = text(/j-search-result__employer">([\s\S]*?)<\/div>/);
+    const location = text(/<div>\s*Location:([\s\S]*?)<\/div>/);
+    const salary = text(/<strong>Salary:\s*<\/strong>([\s\S]*?)<\/div>/);
+    const placed = text(/<strong>Date Placed:\s*<\/strong>([\s\S]*?)<\/div>/);
+    const closes = text(/j-search-result__date--blue\s*">([\s\S]*?)<\/span>/);
+    out.push({
+      id: `jac${link[2]}`, title: stripHtml(link[3]).replace(/\s+/g, ' ').trim(), url: link[1].replace(/^(https:\/\/www\.jobs\.ac\.uk\/job\/[A-Z0-9]+)\/.*$/, '$1'),
+      company, location, department, salary, postedAt: dayMonthToIso(placed, today), closes: closingToIso(closes, today),
+      description: [department, salary].filter(Boolean).join('. '),
+    });
+  }
+  return out;
+}
+
+export async function jobsAcUkCollect(fetchFn, keyword, today = new Date()) {
+  const res = await fetchFn(jobsAcUkUrl(keyword), { headers: { Accept: 'text/html' } });
+  if (!res.ok) throw new Error(`HTTP ${res.status} from www.jobs.ac.uk`);
+  // UK board: a location it does not recognise is still in the UK or Europe.
+  return parseJobsAcUk(await res.text(), today).map((j) => ({ ...j, market: marketOf(j.location) || 'EMEA', university: true }));
+}

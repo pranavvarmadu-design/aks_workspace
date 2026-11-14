@@ -4,8 +4,7 @@ import { SECTORS, UNIVERSITY_RE } from './config.js';
 import { isIndia } from './screen.js';
 import {
   adzunaSearch, planAdzunaQueries, rssCollect, workdayCollect,
-  greenhouseCollect, leverCollect, normaliseJob, employerFeedUrl, smartRecruitersCollect,
-} from './collectors.js';
+  greenhouseCollect, leverCollect, normaliseJob, employerFeedUrl, smartRecruitersCollect, jobsAcUkCollect } from './collectors.js';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const words = (s) => String(s).toLowerCase();
@@ -87,6 +86,11 @@ export async function collectAll({ fetchFn = fetch, profile, sources, keys = {},
 
   for (const feed of sources.rss || [])
     raw.push(...(await run(feed.name, () => rssCollect(fetchFn, feed))).map((j) => normaliseJob('rss', { ...j, market: j.market || feed.market, university: feed.university, sector: feed.sector })));
+
+  for (const kw of sources.jobsAcUk || []) {
+    raw.push(...(await run(`jobs.ac.uk: ${kw}`, () => jobsAcUkCollect(fetchFn, kw))).map((j) => normaliseJob('jobs.ac.uk', j)));
+    await sleep(Math.min(throttleMs, 1500));
+  }
 
   for (const kw of sources.scienceCareers || []) {
     const feed = { name: `Science Careers: ${kw}`, url: `https://jobs.sciencecareers.org/jobsrss/?keywords=${encodeURIComponent(kw)}`, format: 'madgex', market: 'US', university: true };

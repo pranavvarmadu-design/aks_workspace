@@ -78,6 +78,8 @@ export const DEFAULT_SOURCES = {
     { name: 'HigherEdJobs: Food Science', url: 'https://www.higheredjobs.com/rss/categoryFeed.cfm?catID=53', market: 'US', university: true },
     { name: 'HigherEdJobs: Laboratory and Research', url: 'https://www.higheredjobs.com/rss/categoryFeed.cfm?catID=150', market: 'US', university: true },
   ],
+  // jobs.ac.uk: UK universities and institutes (Oxford, Cambridge, John Innes, Kew), some Europe.
+  jobsAcUk: ['plant postdoctoral', 'plant research associate', 'botany', 'pollination', 'plant science research fellow'],
   // Science Careers (journal Science): international, keyword RSS. Market comes from each posting's location.
   scienceCareers: ['postdoctoral plant', 'postdoc botany', 'pollination', 'plant biology postdoctoral'],
   // University career sites that run on Workday expose a JSON search endpoint.
@@ -152,4 +154,4 @@ export const CATEGORY_LABELS = {
 };
 
 export const UNIVERSITY_RE =
-  /\b(universit\w*|universid\w*|national laborator\w*|botanic\w*|csiro|inrae|riken|college|institute of technology|polytechnic|hochschule|\beth\b|epfl|school of medicine|medical school|research institute|institut\w*|academy|a\*star|max planck|cnrs|inserm|csic|fraunhofer|helmholtz|wageningen|karolinska|nih\b|usda\b)/i;
+  /\b(universit\w*|universid\w*|national laborator\w*|botanic\w*|csiro|inrae|riken|college|institute of technology|polytechnic|hochschule|\beth\b|epfl|school of medicine|medical school|research institute|institut\w*|academy|a\*star|max planck|cnrs|inserm|csic|fraunhofer|helmholtz|wageningen|karolinska|nih\b|usda\b|john innes|sainsbury laborator\w*|rothamsted|earlham|james hutton|royal botanic|kew\b|research cent(re|er))/i;
