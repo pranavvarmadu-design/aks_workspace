@@ -75,6 +75,14 @@ function screenTags(j) {
   const s = screenJob(j, state.settings.profile);
   return [
     s.sponsorship === 'no' ? '<span class="tag bad">No visa sponsorship</span>' : s.sponsorship === 'yes' ? '<span class="tag good">Sponsorship mentioned</span>' : '',
+    ...(s.india ? [
+      s.india.sales ? '<span class="tag bad">Sales or marketing role</span>' : '',
+      s.india.years != null && s.india.years >= 2 ? `<span class="tag bad">Asks ${s.india.years}+ years experience</span>` : '',
+      s.india.industryExperience ? '<span class="tag bad">Wants industry experience</span>' : '',
+      s.india.degrees.length ? `<span class="tag bad">Asks for ${esc(s.india.degrees.slice(0, 2).join(' / '))}</span>` : '',
+      s.india.phd ? '<span class="tag good">PhD valued</span>' : '',
+      s.india.ncr ? '<span class="tag good">Delhi NCR</span>' : '',
+    ] : []),
     s.blockers.length ? `<span class="tag bad" title="Check whether these are required">Mentions ${esc(s.blockers.slice(0, 3).join(', '))}</span>` : '',
     s.strengths.length ? `<span class="tag good">${esc(s.strengths.slice(0, 3).join(', '))}</span>` : '',
   ];

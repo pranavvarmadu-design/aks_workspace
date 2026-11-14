@@ -32,7 +32,7 @@ fs.rmSync(path.join(DATA, 'config.json'), { force: true });
 const backend = spawn('node', [path.join(ROOT, 'backend/server.js')], { env: { ...process.env, PORT: '8799', DATA_DIR: DATA, API_TOKEN: 'tok', COLLECT_INTERVAL_HOURS: '9999' }, stdio: 'inherit' });
 
 // a job page like the ones she would capture
-const page1 = `<html><head><title>Job</title><script type="application/ld+json">${JSON.stringify({ '@type': 'JobPosting', title: 'Senior Scientist, Crop Genomics', hiringOrganization: { name: 'GreenGene Pvt Ltd' }, jobLocation: { address: { addressLocality: 'Pune', addressCountry: 'IN' } }, description: '<p>Lead genomics for seed traits. Requires PCR, CRISPR and Python. Applicants must be authorized to work in the US without sponsorship.</p>', datePosted: '2026-11-10' })}</script></head><body><h1>Senior Scientist</h1></body></html>`;
+const page1 = `<html><head><title>Job</title><script type="application/ld+json">${JSON.stringify({ '@type': 'JobPosting', title: 'Senior Scientist, Crop Genomics', hiringOrganization: { name: 'GreenGene Pvt Ltd' }, jobLocation: { address: { addressLocality: 'Pune', addressCountry: 'IN' } }, description: '<p>Lead genomics for seed traits. Requires PCR, CRISPR and Python. Minimum 5 years of industry experience. M.Pharm preferred.</p>', datePosted: '2026-11-10' })}</script></head><body><h1>Senior Scientist</h1></body></html>`;
 const web = http.createServer((q, r) => r.end(page1)).listen(8798);
 
 const ctx = await chromium.launchPersistentContext(path.join(S, 'profile'), {
@@ -109,7 +109,7 @@ await p.waitForFunction(() => /Saved "Senior Scientist, Crop Genomics"/.test(doc
 ok(await p.locator('.job h3').first().textContent() === 'Senior Scientist, Crop Genomics', 'captured job appears under Saved');
 ok(/GreenGene Pvt Ltd · Pune, IN/.test(await p.locator('.job .meta').first().textContent()), 'captured employer and location');
 const capTags = await p.locator('.job .tags').first().textContent();
-ok(/No visa sponsorship/.test(capTags) && /crispr/i.test(capTags), 'card flags sponsorship and blockers: ' + capTags);
+ok(/Asks 5\+ years experience/.test(capTags) && /Wants industry experience/.test(capTags) && /M\.PHARM/.test(capTags) && /crispr/i.test(capTags) && !/sponsorship/i.test(capTags), 'India card flags experience, degree and blockers: ' + capTags);
 
 // resume: keywords from resume, then tailor
 await p.bringToFront();

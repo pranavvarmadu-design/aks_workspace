@@ -33,6 +33,33 @@ export function sponsorship(text = '') {
   return null;
 }
 
+const INDIA_RE = /\b(india|delhi|ncr|gurgaon|gurugram|noida|faridabad|ghaziabad|mumbai|navi mumbai|thane|pune|bengaluru|bangalore|hyderabad|chennai|kolkata|ahmedabad|vadodara|baroda|chandigarh|lucknow|jaipur|indore|goa|sikkim|baddi|solan|visakhapatnam|vizag)\b/i;
+const NCR_RE = /\b(delhi|ncr|gurgaon|gurugram|noida|faridabad|ghaziabad)\b/i;
+const SALES_RE = /\b(sales|business development|marketing|territory|medical representative|area manager|key account|pre-?sales)\b/i;
+const DEGREE_RE = /\b(b\.?\s?pharm|m\.?\s?pharm|pharm\.?\s?d|mba|pgdm|b\.?\s?tech|m\.?\s?tech|b\.?\s?e\.|chartered accountant)\b/gi;
+
+export const isIndia = (job) => job.market === 'IN' || job.category === 'industry' || INDIA_RE.test(job.location || '');
+
+// Smallest "N years" figure stated next to "experience", e.g. "3-5 years of experience" -> 3.
+export function yearsRequired(text = '') {
+  const found = [];
+  const re = /(\d{1,2})\s*(?:\+|plus)?\s*(?:(?:-|to|–)\s*\d{1,2})?\s*(?:years?|yrs?)(?:'s)?\s*(?:of\s+)?(?:\w+\s+){0,4}?experience|experience\s*(?:of|:)?\s*(\d{1,2})\s*(?:\+|plus)?\s*(?:(?:-|to|–)\s*\d{1,2})?\s*(?:years?|yrs?)/gi;
+  for (const m of text.matchAll(re)) found.push(Number(m[1] || m[2]));
+  return found.length ? Math.min(...found) : null;
+}
+
+export function indiaChecks(job) {
+  const text = `${job.title || ''}\n${job.description || ''}`;
+  return {
+    years: yearsRequired(text),
+    industryExperience: /\b(industry|industrial|corporate|gmp|glp|plant|manufacturing|pharmaceutical industry)\s+experience\b|experience\s+in\s+(?:a\s+|the\s+)?(?:pharmaceutical|agro|seed|biotech|fmcg)\s+(?:industry|company)/i.test(text),
+    degrees: [...new Set([...text.matchAll(DEGREE_RE)].map((m) => m[0].replace(/\s+/g, '').toUpperCase().replace(/\.$/, '')))],
+    sales: SALES_RE.test(job.title || ''),
+    phd: /\bph\.?\s?d\b|doctorate/i.test(text),
+    ncr: NCR_RE.test(job.location || ''),
+  };
+}
+
 const has = (text, term) => new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i').test(text);
 
 export function screenJob(job, profile = {}) {
@@ -41,7 +68,8 @@ export function screenJob(job, profile = {}) {
   const strengths = (profile.strengthTerms?.length ? profile.strengthTerms : DEFAULT_STRENGTHS).filter((t) => has(text, t));
   return {
     hasText: (job.description || '').length > 200,
-    sponsorship: job.market === 'US' || job.category === 'captured' ? sponsorship(text) : null,
+    sponsorship: !isIndia(job) && (job.market === 'US' || job.category === 'captured') ? sponsorship(text) : null,
+    india: isIndia(job) ? indiaChecks(job) : null,
     blockers: [...new Set(blockers)].slice(0, 6),
     strengths: [...new Set(strengths)].slice(0, 6),
   };

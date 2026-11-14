@@ -10,15 +10,15 @@ export const MARKETS = {
 export const SECTORS = {
   agritech: {
     label: 'Agritech',
-    terms: ['agritech', 'agronomy', 'crop science', 'seed', 'precision agriculture', 'plant breeding', 'agri'],
+    terms: ['agritech', 'agronomy', 'agronomist', 'crop science', 'crop research', 'seed', 'precision agriculture', 'plant breeding', 'horticulture', 'pollination', 'agri'],
   },
   biotech: {
     label: 'Biotech',
-    terms: ['biotechnology', 'biotech', 'molecular biology', 'genomics', 'bioprocess', 'cell culture', 'fermentation'],
+    terms: ['biotechnology', 'biotech', 'molecular biology', 'genomics', 'bioprocess', 'cell culture', 'fermentation', 'tissue culture', 'botany', 'microscopy'],
   },
   pharma: {
     label: 'Pharma',
-    terms: ['pharmaceutical', 'pharma', 'drug discovery', 'formulation', 'clinical research', 'regulatory affairs', 'biologics'],
+    terms: ['pharmaceutical', 'pharma', 'drug discovery', 'formulation', 'clinical research', 'regulatory affairs', 'biologics', 'phytochem', 'herbal', 'ayurved', 'nutraceutical', 'botanical', 'cosmetic', 'analytical'],
   },
 };
 
@@ -30,9 +30,9 @@ export const DEFAULT_PROFILE = {
   academicRoles: ['postdoctoral', 'postdoc', 'postdoctoral fellow', 'postdoctoral research associate', 'postdoctoral scholar'],
   // Up to three search phrases per India sector.
   sectorQueries: {
-    agritech: ['agritech', 'agronomist', 'crop science'],
-    biotech: ['biotechnology', 'molecular biology scientist', 'bioprocess'],
-    pharma: ['pharmaceutical research', 'drug discovery', 'formulation scientist'],
+    agritech: ['agronomist', 'crop research scientist', 'seed research'],
+    biotech: ['plant tissue culture', 'research scientist botany', 'plant biotechnology'],
+    pharma: ['phytochemistry', 'herbal research scientist', 'analytical research scientist'],
   },
   excludeTerms: [],
   // Keep only university listings whose title matches academicRoles (postdoc by default).

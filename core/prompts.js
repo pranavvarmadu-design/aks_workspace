@@ -56,7 +56,8 @@ screen is a fast, honest go/no-go for her:
 - requiredSheLacks: techniques the listing REQUIRES (not "preferred") that her candidate notes say she does not have, or only prepares for without operating. Empty if none or if there are no candidate notes.
 - strengthsMatched: parts of the role that match what she is strong in.
 - coreOutput: one phrase for what the lab mainly produces (for example sequence data, constructs, models, anatomical and imaging data, field data).
-- verdict: skip if any required technique is one she lacks, or sponsorship is not_offered for a US post; borderline if the lab's core output is sequence data, constructs, proteins or models; apply if the work measures structures, secretions or organisms in the field or in collections and nothing required is missing.
+- For an industry post in India, also put in requiredSheLacks: a required degree or certification her resume does not show (for example B.Pharm, M.Pharm, MBA), a required minimum of years of industry, GMP or GLP experience (she may have none: check her notes), and a sales, marketing or business-development role presented under a scientific title.
+- verdict: skip if any required technique is one she lacks, or sponsorship is not_offered for a US post, or (India industry) the role is sales or marketing, or it requires a degree she does not hold; borderline if the lab's core output is sequence data, constructs, proteins or models, or (India industry) it asks for several years of industry or GMP experience she lacks; apply if the work measures structures, secretions or organisms in the field or in collections and nothing required is missing.
 - reason: one or two plain sentences.`,
   },
 

@@ -18,3 +18,23 @@ test('screenJob flags blockers and strengths without hiding anything', () => {
   assert.equal(s.hasText, true);
   assert.equal(screenJob({ market: 'IN', title: 'x', description: 'no sponsorship' }).sponsorship, null, 'sponsorship only judged for US or captured posts');
 });
+
+test('India industry checks: experience, degrees, sales roles, location', async () => {
+  const { indiaChecks, yearsRequired, isIndia } = await import('../core/screen.js');
+  assert.equal(yearsRequired('Minimum 3-5 years of relevant industry experience'), 3);
+  assert.equal(yearsRequired('Experience: 2+ yrs in QC'), 2);
+  assert.equal(yearsRequired('PhD in Botany with publications'), null);
+  const c = indiaChecks({ title: 'Research Scientist - Phytochemistry', location: 'Gurugram', description: 'M.Pharm or PhD. 4+ years of GMP experience in a pharmaceutical company.' });
+  assert.equal(c.years, 4);
+  assert.equal(c.industryExperience, true);
+  assert.deepEqual(c.degrees, ['M.PHARM']);
+  assert.equal(c.phd, true);
+  assert.equal(c.ncr, true);
+  assert.equal(c.sales, false);
+  assert.equal(indiaChecks({ title: 'Area Sales Manager - Seeds', location: 'Pune' }).sales, true);
+  assert.equal(isIndia({ category: 'captured', location: 'Hyderabad, Telangana' }), true);
+  assert.equal(isIndia({ category: 'captured', location: 'Boston, MA' }), false);
+  const s = screenJob({ category: 'captured', location: 'Pune, IN', title: 'x', description: 'must be authorized to work in the US without sponsorship' });
+  assert.equal(s.sponsorship, null, 'sponsorship is not judged for India posts');
+  assert.ok(s.india);
+});
