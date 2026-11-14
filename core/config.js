@@ -46,6 +46,13 @@ export const DEFAULT_PROFILE = {
     'economic', 'aerosol', 'emission', 'methane',
     'deer', 'wildlife', 'geography',
   ],
+  // Office and plant-floor roles skipped in the India industry tab.
+  industryExcludeTerms: [
+    'finance', 'account', 'audit', 'tax', 'legal', 'compliance officer', 'hr', 'human resource', 'talent', 'payroll',
+    'procurement', 'purchase', 'supply chain', 'logistic', 'warehouse', 'sap', 'it ', 'software', 'developer', 'engineer',
+    'architect', 'data platform', 'digital', 'cyber', 'security', 'mechanic', 'electrical', 'instrument', 'maintenance',
+    'production', 'manufacturing', 'operator', 'technician', 'shift', 'driver', 'admin', 'secretary', 'crm', 'category manager',
+  ],
   // Methods she does not have: skipped even when the title is in her field.
   alwaysExcludeTerms: ['model', 'remote sensing', 'forecasting', 'ai/ml', 'machine learning', 'data science', 'bioinformatic', 'computational'],
   // Words in a title that mark her field; they lift a listing up the ranking.
@@ -77,6 +84,16 @@ export const DEFAULT_SOURCES = {
   ],
   // Company career boards with public APIs. Add the board slug from the
   // company's careers URL, e.g. boards.greenhouse.io/<slug> or jobs.lever.co/<slug>.
+  // India industry: employers' own career sites. Add more with the same shapes.
+  // SAP SuccessFactors career sites publish RSS search feeds with full descriptions.
+  employerFeeds: [
+    { name: 'Cipla', base: 'https://careers.cipla.com', sector: 'pharma' },
+    { name: 'UPL', base: 'https://careers.upl-ltd.com', sector: 'agritech' },
+    { name: 'Bayer', base: 'https://jobs.bayer.com' },
+  ],
+  employerKeywords: ['research', 'scientist', 'analytical', 'regulatory'],
+  smartrecruiters: [{ company: 'SyngentaGroup', name: 'Syngenta', country: 'in', sector: 'agritech' }],
+  workdayIndustry: [{ name: 'FMC', host: 'fmc.wd12.myworkdayjobs.com', tenant: 'fmc', site: 'FMC', sector: 'agritech' }],
   greenhouse: [], // { slug, name, market: 'IN', sector: 'biotech' }
   lever: [], // { slug, name, market: 'IN', sector: 'agritech' }
 };

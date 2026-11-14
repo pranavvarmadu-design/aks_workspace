@@ -109,11 +109,34 @@ export async function rssCollect(fetchFn, feed) {
     // HigherEdJobs puts "Employer (City, ST)" in the description.
     const d = stripHtml(it.description);
     const m = d.length < 160 && d.match(/^(.*?)\s*\(([^()]+)\)\s*$/);
+    // Employer career feeds (SAP SuccessFactors) put the place in the title: "Analyst (Vikhroli, Maharashtra, India)".
+    const t = feed.employer && it.title.match(/^(.*\S)\s*\(([^()]+)\)\s*$/);
+    if (t) return { title: t[1], url: it.link.replace(/&amp;/g, '&').replace(/[?&]feedId=.*$/, ''), postedAt: it.pubDate, company: feed.employer, location: t[2], description: d };
     return {
       title: it.title, url: it.link, postedAt: it.pubDate.replace(/ EST$/, ' -0500').replace(/ EDT$/, ' -0400'),
-      company: m ? m[1] : feed.name, location: m ? m[2] : '', description: m ? '' : d,
+      company: m ? m[1] : feed.employer || feed.name, location: m ? m[2] : '', description: m ? '' : d,
     };
   });
+}
+
+// ---- Employer career sites on SAP SuccessFactors (jobs2web), via their RSS search feeds ----
+
+export const employerFeedUrl = (site, keyword) => `${site.base.replace(/\/+$/, '')}/services/rss/job/?locale=en_US&keywords=${encodeURIComponent(keyword)}`;
+
+// ---- SmartRecruiters public postings API ----
+
+export async function smartRecruitersCollect(fetchFn, board) {
+  const p = new URLSearchParams({ limit: '100' });
+  if (board.country) p.set('country', board.country);
+  const data = await getJson(fetchFn, `https://api.smartrecruiters.com/v1/companies/${board.company}/postings?${p}`);
+  return (data.content || []).map((j) => ({
+    title: j.name,
+    company: board.name || j.company?.name || board.company,
+    location: j.location?.fullLocation || [j.location?.city, j.location?.country].filter(Boolean).join(', '),
+    url: `https://jobs.smartrecruiters.com/${board.company}/${j.id}`,
+    description: [j.department?.label, j.function?.label, j.experienceLevel?.label].filter(Boolean).join(' · '),
+    postedAt: j.releasedDate,
+  }));
 }
 
 // ---- Workday career sites ----

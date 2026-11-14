@@ -1,9 +1,10 @@
 // Runs every enabled collector, then classifies, scores and de-duplicates.
 
 import { SECTORS, UNIVERSITY_RE } from './config.js';
+import { isIndia } from './screen.js';
 import {
   adzunaSearch, planAdzunaQueries, rssCollect, workdayCollect,
-  greenhouseCollect, leverCollect, normaliseJob,
+  greenhouseCollect, leverCollect, normaliseJob, employerFeedUrl, smartRecruitersCollect,
 } from './collectors.js';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -95,6 +96,25 @@ export async function collectAll({ fetchFn = fetch, profile, sources, keys = {},
 
   for (const b of sources.greenhouse || [])
     raw.push(...(await run(`Greenhouse: ${b.name || b.slug}`, () => greenhouseCollect(fetchFn, b))).map((j) => normaliseJob('greenhouse', { ...j, market: b.market || 'IN', sector: b.sector, university: b.university })));
+  // India industry: employers' own career sites. Only their India postings are kept.
+  const indiaOnly = (list, source, extra) => list
+    .map((j) => normaliseJob(source, { ...j, ...extra }))
+    .filter((j) => isIndia({ location: j.location }))
+    .map((j) => ({ ...j, market: 'IN' }));
+  for (const site of sources.employerFeeds || []) {
+    for (const kw of site.keywords || sources.employerKeywords || ['research']) {
+      const feed = { name: site.name, employer: site.name, url: employerFeedUrl(site, kw) };
+      raw.push(...indiaOnly(await run(`${site.name}: ${kw}`, () => rssCollect(fetchFn, feed)), 'employer', { sector: site.sector }));
+      await sleep(Math.min(throttleMs, 1500));
+    }
+  }
+  for (const b of sources.smartrecruiters || [])
+    raw.push(...indiaOnly(await run(`${b.name}: careers`, () => smartRecruitersCollect(fetchFn, b)), 'employer', { sector: b.sector }));
+  for (const site of sources.workdayIndustry || []) {
+    raw.push(...indiaOnly(await run(`${site.name}: India`, () => workdayCollect(fetchFn, site, 'India')), 'employer', { sector: site.sector }));
+    await sleep(Math.min(throttleMs, 1000));
+  }
+
   for (const b of sources.lever || [])
     raw.push(...(await run(`Lever: ${b.name || b.slug}`, () => leverCollect(fetchFn, b))).map((j) => normaliseJob('lever', { ...j, market: b.market || 'IN', sector: b.sector, university: b.university })));
 
@@ -119,6 +139,7 @@ export function finalise(raw, profile) {
     const inField = (profile.relevanceTerms || []).some((t) => startsWord(j.title, t));
     if (!inField && exclude.some((x) => startsWord(j.title, x))) continue;
     if ((profile.alwaysExcludeTerms || []).some((x) => startsWord(j.title, x))) continue;
+    if (j.category === 'industry' && (profile.industryExcludeTerms || []).some((x) => startsWord(j.title, x))) continue;
     // University listings must name one of her target roles (postdoc by default).
     if (j.category === 'university' && profile.universityRolesOnly !== false && !isTargetRole(j.title, profile)) continue;
     const key = words(`${j.title}|${j.company}`).replace(/\s+/g, ' ');

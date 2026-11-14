@@ -4,10 +4,25 @@
   "version": "0.1.0",
   "description": "Finds university and India industry jobs from legal sources, and tailors your resume to each listing.",
   "minimum_chrome_version": "120",
-  "action": { "default_title": "Open Job Finder" },
-  "side_panel": { "default_path": "sidepanel.html" },
-  "background": { "service_worker": "dist/background.js", "type": "module" },
-  "permissions": ["storage", "unlimitedStorage", "sidePanel", "activeTab", "scripting", "alarms", "contextMenus"],
+  "action": {
+    "default_title": "Open Job Finder"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "background": {
+    "service_worker": "dist/background.js",
+    "type": "module"
+  },
+  "permissions": [
+    "storage",
+    "unlimitedStorage",
+    "sidePanel",
+    "activeTab",
+    "scripting",
+    "alarms",
+    "contextMenus"
+  ],
   "host_permissions": [
     "https://api.anthropic.com/*",
     "https://api.adzuna.com/*",
@@ -15,7 +30,14 @@
     "https://*.myworkdayjobs.com/*",
     "https://boards-api.greenhouse.io/*",
     "https://api.lever.co/*",
+    "https://careers.cipla.com/*",
+    "https://careers.upl-ltd.com/*",
+    "https://jobs.bayer.com/*",
+    "https://api.smartrecruiters.com/*",
+    "https://jobs.smartrecruiters.com/*",
     "http://localhost/*"
   ],
-  "optional_host_permissions": ["https://*/*"]
+  "optional_host_permissions": [
+    "https://*/*"
+  ]
 }
