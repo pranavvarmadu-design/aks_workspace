@@ -41,9 +41,13 @@ export function parseIndeedDetail(md = '') {
 // 'university': postdoc-level roles in every country Indeed serves, in each country's own wording.
 // 'industry': the India sector searches.
 export function indeedSearches(profile = {}, kind = 'university') {
-  if (kind === 'industry')
-    return [...new Set(['research scientist agriculture', ...Object.values(profile.sectorQueries || {}).flat()])].slice(0, 10)
-      .map((q) => ({ search: q, location: 'India', country: 'IN', market: 'IN' }));
+  if (kind === 'industry') {
+    // Each search keeps the sector it was run for, so a bare "Research Scientist" result is not lost.
+    const list = [['research scientist agriculture', 'agritech'], ...Object.entries(profile.sectorQueries || {}).flatMap(([sector, qs]) => qs.map((q) => [q, sector]))];
+    const seen = new Set();
+    return list.filter(([q]) => !seen.has(q) && seen.add(q)).slice(0, 10)
+      .map(([q, sector]) => ({ search: q, location: 'India', country: 'IN', market: 'IN', sector }));
+  }
   const out = [];
   for (const c of INDEED_COUNTRIES) {
     const roles = c.style === 'fellow' ? ['research fellow', 'postdoctoral'] : c.style === 'postdoc' ? ['postdoc'] : ['postdoctoral'];
@@ -66,6 +70,7 @@ export function indeedToRaw(j, search) {
     title: j.title, company: j.company, location: j.location, url: j.url,
     postedAt: j.postedAt, salary: j.salary, description: j.description || '',
     market: search.market,
+    sector: search.sector,
     university: search.market !== 'IN' && (UNIVERSITY_RE.test(j.company) || /\b(usda|agricultural research service)/i.test(j.company)),
   });
   return { ...n, id: `indeed:${hash(`${j.title}|${j.company}|${j.location}`.toLowerCase())}`, jobId: j.jobId };

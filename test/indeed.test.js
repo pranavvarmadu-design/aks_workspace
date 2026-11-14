@@ -75,6 +75,10 @@ test('university searches cover every country in its own wording; industry searc
   const i = indeedSearches(DEFAULT_PROFILE, 'industry');
   assert.ok(i.length && i.every((x) => x.country === 'IN' && x.location === 'India'));
   assert.equal(i[0].search, 'research scientist agriculture');
+  assert.ok(i.every((x) => ['agritech', 'biotech', 'pharma'].includes(x.sector)));
+  const kept = finalise([indeedToRaw({ jobId: 'J9', title: 'Research Scientist', company: 'Syngenta Biologicals', location: 'Panaji, Goa', url: 'u9' }, i[0])], DEFAULT_PROFILE);
+  assert.equal(kept.length, 1, 'a bare title keeps the sector of its search');
+  assert.equal(kept[0].sector, 'agritech');
 });
 
 test('research fellow titles count as postdoc level outside the US', () => {

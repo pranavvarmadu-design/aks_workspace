@@ -9,7 +9,8 @@
     "start": "node --env-file-if-exists=.env backend/server.js",
     "collect": "node --env-file-if-exists=.env backend/server.js --once",
     "test": "node --test test/*.test.js",
-    "e2e": "npm run build && node e2e/extension.e2e.mjs"
+    "e2e": "npm run build && node e2e/extension.e2e.mjs",
+    "e2e:hosted": "node artifact/build.mjs && node e2e/hosted-page.e2e.cjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",

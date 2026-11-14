@@ -69,6 +69,10 @@ select { font: inherit; color: var(--ink); background: var(--surface); border: 1
 .empty { text-align: center; color: var(--muted); padding: 32px 12px; }
 .steps { padding-left: 20px; color: var(--muted); } .steps li.active { color: var(--ink); font-weight: 600; } .steps li.done { color: var(--accent); }
 #review h3 { margin: 0 0 6px; font: 600 16px var(--display); } #review ul { margin: 4px 0 10px 18px; padding: 0; }
+.verdict { border-radius: 6px; padding: 10px; margin-bottom: 10px; background: var(--accent-soft); color: var(--accent); }
+.verdict.borderline, .verdict.skip { background: var(--warn-soft); color: var(--warn); }
+#screen-stop { border-color: var(--warn); }
+#screen-stop h3 { margin: 0 0 6px; font: 600 16px var(--display); color: var(--warn); }
 #review .warn { background: var(--warn-soft); color: var(--warn); border-radius: 6px; padding: 10px; margin-bottom: 10px; }
 .preview { background: #fff; color: #111; border: 1px solid var(--line); border-radius: 8px; padding: 24px; margin: 10px 0; font: 13px/1.4 Georgia, 'Times New Roman', serif; overflow-wrap: anywhere; }
 .preview h1 { font: bold 20px Georgia, serif; margin: 0; color: #111; }
@@ -126,9 +130,10 @@ select { font: inherit; color: var(--ink); background: var(--surface); border: 1
       <label>Anything to emphasise or leave out for this application (optional)
         <textarea id="notes" rows="2"></textarea>
       </label>
-      <button id="build" class="primary">Build tailored resume</button>
+      <button id="build" class="primary">Check fit and build resume</button>
+      <div id="screen-stop" class="card" hidden></div>
       <ol id="steps" class="steps" hidden>
-        <li data-step="analyst">Reading the listing</li>
+        <li data-step="analyst">Screening the listing against your skills</li>
         <li data-step="tailor">Tailoring the resume</li>
         <li data-step="reviewer">Checking every claim against your master resume</li>
       </ol>
@@ -152,6 +157,9 @@ select { font: inherit; color: var(--ink); background: var(--surface); border: 1
   <section id="tab-resume" hidden>
     <p class="muted small">Paste the full resume or CV. Every tailored version is built only from what is written here. It is stored privately for your account; other people who open this page cannot see it.</p>
     <textarea id="resume-text" rows="16" placeholder="Paste resume text here" aria-label="Master resume"></textarea>
+    <label>Skills and constraints: what you operate yourself, what you prepare samples for but do not operate, what you do not have, and visa status. Claude treats this as the truth when screening jobs and tailoring.
+      <textarea id="candidate-text" rows="10" placeholder="Operates herself: ...&#10;Prepares and interprets, does not operate: ...&#10;Does not have: ...&#10;Visa: no work authorisation"></textarea>
+    </label>
     <div class="toolbar">
       <button id="save-resume" class="primary">Save resume</button>
       <button id="extract-profile">Set search keywords from resume</button>

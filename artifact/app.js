@@ -11,7 +11,7 @@ import { esc, resumeToHtml, resumeToMarkdown } from '../core/resume.js';
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 const view = { sort: 'relevance', cat: 'university', filter: 'all', query: '', target: null };
-const state = { jobs: [], captured: [], jobState: {}, tailored: {}, descriptions: {}, resume: '', profile: DEFAULT_PROFILE, status: null };
+const state = { candidate: '', jobs: [], captured: [], jobState: {}, tailored: {}, descriptions: {}, resume: '', profile: DEFAULT_PROFILE, status: null };
 let db, mine, sample, downloads, mcp;
 
 const notice = (msg) => { $('#notice').hidden = !msg; $('#notice').textContent = msg || ''; };
@@ -303,6 +303,8 @@ function setTarget(j) {
   $('#builder-form').hidden = false;
   $('#job-desc').value = state.descriptions[j.id] ?? j.description ?? '';
   $('#build-msg').textContent = state.resume.trim() ? '' : 'Add your resume in the My resume tab first.';
+  $('#screen-stop').hidden = true;
+  view.pendingAnalysis = null;
   showResult(state.tailored[j.id]);
   showTab('builder');
 }
@@ -312,7 +314,7 @@ function showResult(t) {
   if (!t) return;
   const r = t.review;
   const list = (title, items) => items?.length ? `<strong>${title}</strong><ul>${items.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '';
-  $('#review').innerHTML = `<h3>Fit for this role: ${Number(r.matchScore) || 0}/100</h3>` +
+  $('#review').innerHTML = screenHtml(t.analysis.screen) + `<h3>Fit for this role: ${Number(r.matchScore) || 0}/100</h3>` +
     (r.unsupportedClaims?.length
       ? `<div class="warn"><strong>Check before sending.</strong> The reviewer could not find these in your master resume:<ul>${r.unsupportedClaims.map((c) => `<li>${esc(c.claim)} <span class="small">(${esc(c.reason)})</span></li>`).join('')}</ul></div>`
       : '<p class="small">Every claim was found in your master resume.</p>') +
@@ -324,7 +326,16 @@ function showResult(t) {
   $('#letter').value = t.resume.coverLetter || '';
 }
 
-$('#build').onclick = async () => {
+const VERDICT = { apply: 'Worth applying', borderline: 'Borderline', skip: 'Advised: skip' };
+const SPONSOR = { offered: 'Visa sponsorship offered', not_offered: 'No visa sponsorship', not_stated: 'Sponsorship not stated: check before applying', not_applicable: '' };
+function screenHtml(sc) {
+  if (!sc) return '';
+  const lacks = sc.requiredSheLacks?.length ? `<br>Required and not in your skills: ${esc(sc.requiredSheLacks.join(', '))}` : '';
+  const sp = SPONSOR[sc.sponsorship] ? `<br>${esc(SPONSOR[sc.sponsorship])}` : '';
+  return `<div class="verdict ${esc(sc.verdict)}"><strong>${esc(VERDICT[sc.verdict] || sc.verdict)}.</strong> ${esc(sc.reason)}${sp}${lacks}</div>`;
+}
+
+async function runBuild(force) {
   const j = view.target;
   const msg = $('#build-msg');
   if (!state.resume.trim()) return void (msg.textContent = 'Add your resume in the My resume tab first.');
@@ -337,6 +348,7 @@ $('#build').onclick = async () => {
   const btn = $('#build');
   btn.disabled = true;
   msg.textContent = '';
+  $('#screen-stop').hidden = true;
   $('#steps').hidden = false;
   const order = ['analyst', 'tailor', 'reviewer'];
   const mark = (step) => {
@@ -346,24 +358,35 @@ $('#build').onclick = async () => {
     }
   };
   try {
-    const opts = { coverLetter: $('#cover-letter').checked, notes: $('#notes').value.trim() };
+    const opts = { coverLetter: $('#cover-letter').checked, notes: $('#notes').value.trim(), candidate: state.candidate };
     mark('analyst');
-    const analysis = await ask(AGENTS.analyst, AGENTS.analyst.user(job), 'default');
+    const analysis = (force && view.pendingAnalysis) || await ask(AGENTS.analyst, AGENTS.analyst.user(job, state.candidate), 'default');
+    // The playbook's 30-second screen: stop before tailoring when she would be ruled out.
+    if (!force && analysis.screen?.verdict === 'skip') {
+      view.pendingAnalysis = analysis;
+      $('#screen-stop').innerHTML = `<h3>Probably not worth applying</h3>${screenHtml(analysis.screen)}<p class="small muted">Nothing has been tailored yet. You can still build it.</p><button id="build-anyway">Build anyway</button>`;
+      $('#screen-stop').hidden = false;
+      $('#build-anyway').onclick = () => runBuild(true);
+      return;
+    }
     mark('tailor');
     const resume = await ask(AGENTS.tailor, AGENTS.tailor.user(state.resume, job, analysis, opts), 'complex');
     mark('reviewer');
-    const review = await ask(AGENTS.reviewer, AGENTS.reviewer.user(state.resume, resume, analysis), 'default');
+    const review = await ask(AGENTS.reviewer, AGENTS.reviewer.user(state.resume, resume, analysis, state.candidate), 'default');
     const t = { analysis, resume, review, builtAt: new Date().toISOString() };
+    view.pendingAnalysis = null;
     state.tailored[j.id] = t;
     put(`t_${j.id}`, t);
     showResult(t);
     renderJobs();
   } catch (e) {
     msg.textContent = sampleError(e);
+  } finally {
+    $('#steps').hidden = true;
+    btn.disabled = false;
   }
-  $('#steps').hidden = true;
-  btn.disabled = false;
-};
+}
+$('#build').onclick = () => runBuild(false);
 
 const current = () => state.tailored[view.target?.id]?.resume;
 const fileName = (ext) => `${current().name} - ${view.target.company || view.target.title}`.replace(/[^\w .-]+/g, '').trim().slice(0, 80) + ext;
@@ -424,6 +447,8 @@ $('#copy-md').onclick = async (e) => {
 
 $('#save-resume').onclick = async () => {
   state.resume = $('#resume-text').value;
+  state.candidate = $('#candidate-text').value;
+  await put('candidate', { text: state.candidate });
   await put('resume', { text: state.resume });
   $('#resume-msg').textContent = mine ? 'Resume saved.' : '';
 };
@@ -436,7 +461,8 @@ $('#extract-profile').onclick = async (e) => {
   msg.textContent = 'Reading the resume...';
   try {
     await put('resume', { text: state.resume });
-    const p = await ask(AGENTS.profile, AGENTS.profile.user(state.resume), 'default');
+    state.candidate = $('#candidate-text').value;
+    const p = await ask(AGENTS.profile, AGENTS.profile.user(state.resume + (state.candidate ? `\n\nSkills and constraints:\n${state.candidate}` : '')), 'default');
     state.profile = { ...state.profile, ...p };
     // Keywords are shared with Claude's collector; the resume itself is not.
     await db?.doc('meta/profile').set(state.profile).catch(() => {});
@@ -480,6 +506,7 @@ $('#extract-profile').onclick = async (e) => {
     for (const x of own.docs) {
       const v = x.data();
       if (x.id === 'resume') state.resume = v.text || '';
+      else if (x.id === 'candidate') state.candidate = v.text || '';
       else if (x.id === 'state') state.jobState = v.map || {};
       else if (x.id.startsWith('t_')) state.tailored[x.id.slice(2)] = v;
       else if (x.id.startsWith('d_')) state.descriptions[x.id.slice(2)] = v.text || '';
@@ -492,6 +519,7 @@ $('#extract-profile').onclick = async (e) => {
     notice(`Could not load data (${e.code || e.message}).`);
   }
   $('#resume-text').value = state.resume;
+  $('#candidate-text').value = state.candidate;
   rescore();
   renderStatus();
   renderProfile();
