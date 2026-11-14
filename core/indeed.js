@@ -2,6 +2,7 @@
 // The connector answers in Markdown; these functions turn it into listings.
 
 import { normaliseJob } from './collectors.js';
+import { INDEED_COUNTRIES, UNIVERSITY_RE } from './config.js';
 
 const FIELD = (block, name) => (block.match(new RegExp(`\\*\\*${name}:\\*\\*\\s*(.+)`)) || [])[1]?.trim() || '';
 const na = (v) => (v === 'N/A' ? '' : v);
@@ -36,13 +37,20 @@ export function parseIndeedDetail(md = '') {
   return lines.slice(i).join('\n').replace(/[ \t]+/g, ' ').trim();
 }
 
-// The searches to run for her: US postdocs in her fields, and the India sector searches.
-export function indeedSearches(profile = {}) {
-  const fields = (profile.fieldKeywords || []).slice(0, 3);
-  const us = [...new Set(['botany', ...fields])].map((f) => ({ search: `postdoctoral ${f}`, location: 'United States', country: 'US', market: 'US' }));
-  const india = [...new Set(Object.values(profile.sectorQueries || {}).flat())].slice(0, 6)
-    .map((q) => ({ search: q, location: 'India', country: 'IN', market: 'IN' }));
-  return [...us, ...india];
+// The searches for one segment of the page.
+// 'university': postdoc-level roles in every country Indeed serves, in each country's own wording.
+// 'industry': the India sector searches.
+export function indeedSearches(profile = {}, kind = 'university') {
+  if (kind === 'industry')
+    return [...new Set(['research scientist agriculture', ...Object.values(profile.sectorQueries || {}).flat()])].slice(0, 10)
+      .map((q) => ({ search: q, location: 'India', country: 'IN', market: 'IN' }));
+  const out = [];
+  for (const c of INDEED_COUNTRIES) {
+    const roles = c.style === 'fellow' ? ['research fellow', 'postdoctoral'] : c.style === 'postdoc' ? ['postdoc'] : ['postdoctoral'];
+    const fields = c.code === 'US' ? [...new Set(['plant', 'botany', ...(profile.fieldKeywords || []).slice(0, 2)])] : ['plant'];
+    for (const r of roles) for (const f of fields) out.push({ search: `${r} ${f}`, location: c.name, country: c.code, market: c.market });
+  }
+  return out;
 }
 
 const hash = (s) => {
@@ -58,7 +66,7 @@ export function indeedToRaw(j, search) {
     title: j.title, company: j.company, location: j.location, url: j.url,
     postedAt: j.postedAt, salary: j.salary, description: j.description || '',
     market: search.market,
-    university: search.market !== 'IN' && /\b(universit|college|institute|national laborator|usda|agricultural research service|botanical garden)/i.test(j.company),
+    university: search.market !== 'IN' && (UNIVERSITY_RE.test(j.company) || /\b(usda|agricultural research service)/i.test(j.company)),
   });
   return { ...n, id: `indeed:${hash(`${j.title}|${j.company}|${j.location}`.toLowerCase())}`, jobId: j.jobId };
 }

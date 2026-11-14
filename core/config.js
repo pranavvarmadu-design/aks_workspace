@@ -5,6 +5,7 @@ export const MARKETS = {
   US: { label: 'United States', adzuna: ['us'] },
   SG: { label: 'Singapore', adzuna: ['sg'] },
   EMEA: { label: 'EMEA', adzuna: ['gb', 'de', 'nl', 'ch', 'fr'] },
+  OTHER: { label: 'Other countries', adzuna: ['ca', 'au', 'nz'] },
 };
 
 export const SECTORS = {
@@ -98,10 +99,39 @@ export const DEFAULT_SOURCES = {
   lever: [], // { slug, name, market: 'IN', sector: 'agritech' }
 };
 
+// Indeed postdoc searches for every country Indeed serves well, in each country's own job-title style.
+// style: 'us' postdoctoral; 'fellow' research fellow / research associate; 'postdoc' postdoc.
+export const INDEED_COUNTRIES = [
+  { code: 'US', name: 'United States', market: 'US', style: 'us' },
+  { code: 'CA', name: 'Canada', market: 'OTHER', style: 'us' },
+  { code: 'GB', name: 'United Kingdom', market: 'EMEA', style: 'fellow' },
+  { code: 'IE', name: 'Ireland', market: 'EMEA', style: 'fellow' },
+  { code: 'DE', name: 'Germany', market: 'EMEA', style: 'postdoc' },
+  { code: 'NL', name: 'Netherlands', market: 'EMEA', style: 'postdoc' },
+  { code: 'CH', name: 'Switzerland', market: 'EMEA', style: 'postdoc' },
+  { code: 'AT', name: 'Austria', market: 'EMEA', style: 'postdoc' },
+  { code: 'BE', name: 'Belgium', market: 'EMEA', style: 'postdoc' },
+  { code: 'FR', name: 'France', market: 'EMEA', style: 'postdoc' },
+  { code: 'ES', name: 'Spain', market: 'EMEA', style: 'postdoc' },
+  { code: 'IT', name: 'Italy', market: 'EMEA', style: 'postdoc' },
+  { code: 'SE', name: 'Sweden', market: 'EMEA', style: 'postdoc' },
+  { code: 'DK', name: 'Denmark', market: 'EMEA', style: 'postdoc' },
+  { code: 'NO', name: 'Norway', market: 'EMEA', style: 'postdoc' },
+  { code: 'FI', name: 'Finland', market: 'EMEA', style: 'postdoc' },
+  { code: 'IL', name: 'Israel', market: 'EMEA', style: 'postdoc' },
+  { code: 'AE', name: 'United Arab Emirates', market: 'EMEA', style: 'fellow' },
+  { code: 'ZA', name: 'South Africa', market: 'EMEA', style: 'fellow' },
+  { code: 'SG', name: 'Singapore', market: 'SG', style: 'fellow' },
+  { code: 'HK', name: 'Hong Kong', market: 'OTHER', style: 'fellow' },
+  { code: 'JP', name: 'Japan', market: 'OTHER', style: 'postdoc' },
+  { code: 'AU', name: 'Australia', market: 'OTHER', style: 'fellow' },
+  { code: 'NZ', name: 'New Zealand', market: 'OTHER', style: 'fellow' },
+];
+
 export const CATEGORY_LABELS = {
   university: 'Universities',
   industry: 'India industry',
 };
 
 export const UNIVERSITY_RE =
-  /\b(universit\w*|college|institute of technology|polytechnic|hochschule|\beth\b|epfl|school of medicine|medical school|research institute|institut\w*|academy|a\*star|max planck|cnrs|inserm|csic|fraunhofer|helmholtz|wageningen|karolinska|nih\b|usda\b)/i;
+  /\b(universit\w*|universid\w*|national laborator\w*|botanic\w*|csiro|inrae|riken|college|institute of technology|polytechnic|hochschule|\beth\b|epfl|school of medicine|medical school|research institute|institut\w*|academy|a\*star|max planck|cnrs|inserm|csic|fraunhofer|helmholtz|wageningen|karolinska|nih\b|usda\b)/i;

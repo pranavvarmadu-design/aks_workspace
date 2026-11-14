@@ -59,6 +59,10 @@ function renderJobs() {
   const newest = (a, b) => String(b.postedAt || b.firstSeen).localeCompare(String(a.postedAt || a.firstSeen));
   list.sort(view.sort === 'newest' ? newest : (a, b) => b.rel - a.rel || newest(a, b));
   $('#sort').value = view.sort;
+  // Each segment has its own Indeed search; Saved has none.
+  $('#indeed-bar').hidden = view.cat === 'saved';
+  $('#indeed-run').textContent = view.cat === 'industry' ? 'Search Indeed: India industry' : 'Search all countries';
+  $('#indeed-run').title = view.cat === 'industry' ? 'Searches Indeed India for her agritech, biotech and pharma roles' : 'Searches postdoc-level roles in 24 countries, in each country\'s own job titles (through Indeed)';
   $('#job-list').innerHTML = list.length ? list.slice(0, 200).map(jobCard).join('') : `<div class="empty">${emptyText()}</div>`;
 }
 
@@ -143,16 +147,17 @@ const INDEED_STOP = {
 };
 const indeedMsg = (t) => { $('#indeed-msg').textContent = t; };
 
-async function runIndeed() {
+async function runIndeed(kind) {
   const btn = $('#indeed-run');
   if (!mcp) return indeedMsg('Indeed is available when this page is open on claude.ai with Indeed connected.');
   btn.disabled = true;
   const raw = [];
   let stop = null;
-  const searches = indeedSearches(state.profile);
+  const searches = indeedSearches(state.profile, kind);
   try {
     for (const [i, s] of searches.entries()) {
       indeedMsg(`Searching Indeed (${i + 1} of ${searches.length}): ${s.search}, ${s.location}`);
+      if (i) await new Promise((r) => setTimeout(r, 400)); // a gentle pace on her connection
       try {
         const r = await mcp.callTool('Indeed', 'search_jobs', { search: s.search, location: s.location, country_code: s.country });
         raw.push(...parseIndeedList(resultText(r)).map((j) => indeedToRaw(j, s)));
@@ -184,13 +189,13 @@ async function runIndeed() {
     }
     rescore();
     renderJobs();
-    const u = found.filter((j) => j.category === 'university').length, ind = found.length - u;
-    indeedMsg(stop || `Indeed: ${u} US postdoc and ${ind} India industry listings matched her profile (from ${raw.length} results).`);
+    const where = kind === 'industry' ? 'India industry' : 'postdoc';
+    indeedMsg(stop || `Indeed: ${found.length} ${where} listings matched her profile (from ${raw.length} results across ${new Set(searches.map((s) => s.country)).size} ${kind === 'industry' ? 'country' : 'countries'}).`);
   } finally {
     btn.disabled = false;
   }
 }
-$('#indeed-run').onclick = () => runIndeed();
+$('#indeed-run').onclick = () => runIndeed(view.cat);
 
 $('#job-list').onclick = async (e) => {
   const b = e.target.closest('button[data-act]');

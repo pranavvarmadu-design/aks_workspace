@@ -92,16 +92,16 @@ select { font: inherit; color: var(--ink); background: var(--surface); border: 1
 
   <section id="tab-jobs">
     <p id="status" class="muted small">Loading listings...</p>
-    <div class="toolbar">
-      <button id="indeed-run">Search Indeed</button>
-      <span id="indeed-msg" class="small muted" role="status"></span>
-    </div>
     <div class="segmented" id="categories">
       <button data-cat="university" aria-pressed="true">Universities <span class="count"></span></button>
       <button data-cat="industry" aria-pressed="false">India industry <span class="count"></span></button>
       <button data-cat="saved" aria-pressed="false">Saved <span class="count"></span></button>
     </div>
     <div class="chips" id="filters"></div>
+    <div class="toolbar" id="indeed-bar">
+      <button id="indeed-run">Search Indeed</button>
+      <span id="indeed-msg" class="small muted" role="status"></span>
+    </div>
     <div class="listbar">
       <input id="search" type="search" placeholder="Filter by title, employer or keyword" aria-label="Filter listings">
       <select id="sort" aria-label="Sort listings"><option value="relevance">Most relevant</option><option value="newest">Newest</option></select>

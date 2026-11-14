@@ -46,9 +46,9 @@ test('parseFeed reads RSS items and decodes entities', () => {
 
 test('planAdzunaQueries covers each market and India sector', () => {
   const plan = planAdzunaQueries(DEFAULT_PROFILE);
-  assert.deepEqual([...new Set(plan.map((q) => q.market))].sort(), ['EMEA', 'IN', 'SG', 'US']);
+  assert.deepEqual([...new Set(plan.map((q) => q.market))].sort(), ['EMEA', 'IN', 'OTHER', 'SG', 'US']);
   assert.ok(plan.filter((q) => q.market === 'IN').every((q) => q.sector && !q.university));
-  assert.ok(plan.length <= 50, `too many API calls per run: ${plan.length}`);
+  assert.ok(plan.length <= 60, `too many API calls per run: ${plan.length}`);
 });
 
 test('classify keeps universities and India sector jobs, drops the rest', () => {
@@ -84,8 +84,8 @@ test('collectAll merges sources, de-duplicates and reports failures', async () =
   assert.ok(!calls.some((u) => /linkedin|indeed/.test(u)));
   assert.ok(!jobs.some((j) => j.company === 'Retail Co'), 'non-university employer dropped');
   const uni = jobs.filter((j) => j.category === 'university');
-  assert.deepEqual([...new Set(uni.map((j) => j.market))].sort(), ['EMEA', 'SG', 'US']);
-  assert.equal(jobs.filter((j) => j.title === 'Postdoctoral Fellow in Plant Biotechnology').length, 7, 'one per country, repeats across keyword searches collapsed');
+  assert.deepEqual([...new Set(uni.map((j) => j.market))].sort(), ['EMEA', 'OTHER', 'SG', 'US']);
+  assert.equal(jobs.filter((j) => j.title === 'Postdoctoral Fellow in Plant Biotechnology').length, 10, 'one per country, repeats across keyword searches collapsed');
   assert.ok(jobs.some((j) => j.category === 'industry' && j.sector === 'biotech'));
   const nus = jobs.find((j) => j.source === 'workday');
   assert.equal(nus.url, 'https://nus.wd3.myworkdayjobs.com/en-US/NUS/job/Kent-Ridge/RF_1');

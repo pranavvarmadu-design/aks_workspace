@@ -121,7 +121,8 @@ export async function collectAll({ fetchFn = fetch, profile, sources, keys = {},
   return { jobs: finalise(raw, profile), report };
 }
 
-const POSTDOC_RE = /\bpost[- ]?doc|\bpostdoctoral|\bpost[- ]doctoral|\bfellow \(post ?doc\)/i;
+// 'Research fellow' and 'research associate' are the postdoc titles in the UK, Singapore and the Commonwealth.
+const POSTDOC_RE = /\bpost[- ]?doc|\bpostdoctoral|\bpost[- ]doctoral|\bfellow \(post ?doc\)|\bresearch fellow|\bresearch associate|\bwissenschaftliche[rs]? mitarbeiter/i;
 
 export function isTargetRole(title, profile) {
   const t = words(title);

@@ -64,9 +64,25 @@ test('Indeed listings go through the same filters', () => {
   assert.equal(again.id, jobs[0].id, 'same posting keeps its id when Indeed changes the link');
 });
 
-test('searches cover US postdocs and India sectors', () => {
-  const s = indeedSearches(DEFAULT_PROFILE);
-  assert.ok(s.some((x) => x.country === 'US' && x.search === 'postdoctoral botany'));
-  assert.ok(s.some((x) => x.country === 'IN' && x.location === 'India'));
-  assert.ok(s.length <= 10);
+test('university searches cover every country in its own wording; industry searches cover India', () => {
+  const u = indeedSearches(DEFAULT_PROFILE, 'university');
+  assert.ok(u.some((x) => x.country === 'US' && x.search === 'postdoctoral botany'));
+  assert.ok(u.some((x) => x.country === 'SG' && x.search === 'research fellow plant' && x.market === 'SG'));
+  assert.ok(u.some((x) => x.country === 'DE' && x.search === 'postdoc plant' && x.market === 'EMEA'));
+  assert.ok(u.some((x) => x.country === 'AU' && x.market === 'OTHER'));
+  assert.ok(!u.some((x) => x.country === 'IN'));
+  assert.ok(u.length <= 40, `${u.length} searches`);
+  const i = indeedSearches(DEFAULT_PROFILE, 'industry');
+  assert.ok(i.length && i.every((x) => x.country === 'IN' && x.location === 'India'));
+  assert.equal(i[0].search, 'research scientist agriculture');
+});
+
+test('research fellow titles count as postdoc level outside the US', () => {
+  const jobs = finalise([
+    indeedToRaw({ jobId: 'J1', title: 'Research Fellow (Plant Biotechnology and Biochemistry)', company: 'Nanyang Technological University', location: 'Singapore 639798', url: 'u1' }, { market: 'SG' }),
+    indeedToRaw({ jobId: 'J2', title: 'Research Associate (Postdoc, m/f/d)', company: 'Friedrich-Schiller-Universität Jena', location: 'Jena', url: 'u2' }, { market: 'EMEA' }),
+    indeedToRaw({ jobId: 'J3', title: 'Senior Farm Technician (Crop Science & Tractor Work)', company: 'University of Reading', location: 'Reading', url: 'u3' }, { market: 'EMEA' }),
+  ], DEFAULT_PROFILE);
+  assert.deepEqual(jobs.map((j) => j.title), ['Research Fellow (Plant Biotechnology and Biochemistry)', 'Research Associate (Postdoc, m/f/d)']);
+  assert.deepEqual(jobs.map((j) => j.market), ['SG', 'EMEA']);
 });
