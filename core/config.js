@@ -35,6 +35,8 @@ export const DEFAULT_PROFILE = {
     pharma: ['pharmaceutical research', 'drug discovery', 'formulation scientist'],
   },
   excludeTerms: [],
+  // Keep only university listings whose title matches academicRoles (postdoc by default).
+  universityRolesOnly: true,
 };
 
 export const DEFAULT_SOURCES = {
@@ -46,6 +48,8 @@ export const DEFAULT_SOURCES = {
     { name: 'HigherEdJobs: Biochemistry and Molecular Biology', url: 'https://www.higheredjobs.com/rss/categoryFeed.cfm?catID=99', market: 'US', university: true },
     { name: 'HigherEdJobs: Pharmacy and Pharmacology', url: 'https://www.higheredjobs.com/rss/categoryFeed.cfm?catID=154', market: 'US', university: true },
     { name: 'HigherEdJobs: Food Science', url: 'https://www.higheredjobs.com/rss/categoryFeed.cfm?catID=53', market: 'US', university: true },
+    { name: 'HigherEdJobs: Medical Research', url: 'https://www.higheredjobs.com/rss/categoryFeed.cfm?catID=137', market: 'US', university: true },
+    { name: 'HigherEdJobs: Biological and Biomedical Engineering', url: 'https://www.higheredjobs.com/rss/categoryFeed.cfm?catID=113', market: 'US', university: true },
     { name: 'HigherEdJobs: Laboratory and Research', url: 'https://www.higheredjobs.com/rss/categoryFeed.cfm?catID=150', market: 'US', university: true },
   ],
   // University career sites that run on Workday expose a JSON search endpoint.

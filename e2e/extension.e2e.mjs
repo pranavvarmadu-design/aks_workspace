@@ -19,9 +19,9 @@ const ok = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('ok  '
 // seed the backend store
 const now = new Date().toISOString();
 const raw = [
-  ['adzuna', { title: 'Research Fellow in Plant Biotechnology', company: 'University of Leeds', location: 'Leeds, UK', url: 'https://e.x/1', description: 'molecular biology of crops', market: 'EMEA' }],
-  ['rss', { title: 'Assistant Professor, Plant and Soil Science', company: 'Cornell University', location: 'Ithaca, NY', url: 'https://e.x/2', market: 'US', university: true }],
-  ['workday', { title: 'Research Fellow (Biochemistry)', company: 'NUS', location: 'Kent Ridge', url: 'https://e.x/3', market: 'SG', university: true }],
+  ['adzuna', { title: 'Postdoctoral Fellow in Plant Biotechnology', company: 'University of Leeds', location: 'Leeds, UK', url: 'https://e.x/1', description: 'molecular biology of crops', market: 'EMEA' }],
+  ['rss', { title: 'Postdoctoral Associate, Plant and Soil Science', company: 'Cornell University', location: 'Ithaca, NY', url: 'https://e.x/2', market: 'US', university: true }],
+  ['workday', { title: 'Postdoctoral Fellow (Biochemistry)', company: 'NUS', location: 'Kent Ridge', url: 'https://e.x/3', market: 'SG', university: true }],
   ['adzuna', { title: 'Agronomist, Seed Trials', company: 'DeltaAgri', location: 'Hyderabad', url: 'https://e.x/4', description: 'crop science and seed', market: 'IN', sector: 'agritech' }],
   ['adzuna', { title: 'Formulation Scientist', company: 'Medica Labs', location: 'Ahmedabad', url: 'https://e.x/5', description: 'pharmaceutical formulation', market: 'IN', sector: 'pharma' }],
 ].map(([s, j]) => normaliseJob(s, j));
@@ -89,7 +89,7 @@ await p.waitForSelector('.job');
 const counts = await p.locator('#categories .count').allTextContents();
 ok(counts.join() === '(3),(2),(0)', 'category counts ' + counts.join());
 await p.click('[data-filter=SG]');
-ok((await p.locator('.job h3').allTextContents()).join() === 'Research Fellow (Biochemistry)', 'market filter');
+ok((await p.locator('.job h3').allTextContents()).join() === 'Postdoctoral Fellow (Biochemistry)', 'market filter');
 await p.click('[data-cat=industry]');
 await p.click('[data-filter=pharma]');
 ok((await p.locator('.job h3').allTextContents()).join() === 'Formulation Scientist', 'sector filter');

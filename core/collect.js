@@ -93,6 +93,14 @@ export async function collectAll({ fetchFn = fetch, profile, sources, keys = {},
   return { jobs: finalise(raw, profile), report };
 }
 
+const POSTDOC_RE = /\bpost[- ]?doc|\bpostdoctoral|\bpost[- ]doctoral|\bfellow \(post ?doc\)/i;
+
+export function isTargetRole(title, profile) {
+  const t = words(title);
+  if (POSTDOC_RE.test(title)) return true;
+  return (profile.academicRoles || []).some((r) => r && !/post/i.test(r) && t.includes(words(r)));
+}
+
 export function finalise(raw, profile) {
   const exclude = (profile.excludeTerms || []).map(words).filter(Boolean);
   const seen = new Map();
@@ -100,6 +108,8 @@ export function finalise(raw, profile) {
     const j = classify(r);
     if (!j || !j.title || !j.url) continue;
     if (exclude.some((x) => words(j.title).includes(x))) continue;
+    // University listings must name one of her target roles (postdoc by default).
+    if (j.category === 'university' && profile.universityRolesOnly !== false && !isTargetRole(j.title, profile)) continue;
     const key = words(`${j.title}|${j.company}`).replace(/\s+/g, ' ');
     if (seen.has(key)) continue;
     seen.set(key, { ...j, score: scoreJob(j, profile) });

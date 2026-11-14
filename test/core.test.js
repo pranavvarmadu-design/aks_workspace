@@ -2,14 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DEFAULT_PROFILE } from '../core/config.js';
 import { parseFeed, planAdzunaQueries, stripHtml } from '../core/collectors.js';
-import { collectAll, classify, detectSector, scoreJob } from '../core/collect.js';
+import { collectAll, classify, detectSector, scoreJob, finalise } from '../core/collect.js';
 import { resumeToHtml, resumeToMarkdown } from '../core/resume.js';
 import { mergeJobs } from '../backend/server.js';
 import { digestHtml } from '../backend/digest.js';
 
 const RSS = `<?xml version="1.0"?><rss><channel><title>x</title>
 <item><title>Post-Doctoral Research Associate, Plant &amp;amp; Soil</title><description>Virginia Commonwealth University (Richmond, VA)</description><link>https://www.higheredjobs.com/details.cfm?JobCode=1</link><pubDate>Wed, 11 Nov 2026 09:50:01 EST</pubDate></item>
-<item><title>Lab Manager</title><description><![CDATA[<p>Cornell University (Ithaca, NY)</p>]]></description><link>https://www.higheredjobs.com/details.cfm?JobCode=2</link><pubDate>Tue, 10 Nov 2026 08:00:00 EST</pubDate></item>
+<item><title>Postdoc, Lab of X</title><description><![CDATA[<p>Cornell University (Ithaca, NY)</p>]]></description><link>https://www.higheredjobs.com/details.cfm?JobCode=2</link><pubDate>Tue, 10 Nov 2026 08:00:00 EST</pubDate></item>
 </channel></rss>`;
 
 const json = (body) => ({ ok: true, status: 200, json: async () => body, text: async () => JSON.stringify(body) });
@@ -24,14 +24,14 @@ function fakeFetch(calls) {
       if (country === 'in')
         return json({ results: [{ title: 'Scientist, Bioprocess', company: { display_name: 'Acme Biologics' }, location: { display_name: 'Bengaluru' }, redirect_url: `https://adzuna.in/${encodeURIComponent(u.searchParams.get('what'))}`, description: 'Fermentation and cell culture for biologics', created: '2026-11-10T00:00:00Z' }] });
       return json({ results: [
-        { title: 'Research Fellow in Plant Biotechnology', company: { display_name: 'University of ' + country.toUpperCase() }, location: { display_name: 'Leeds' }, redirect_url: `https://adzuna/${country}/1`, description: 'molecular biology of crops', created: '2026-11-12T00:00:00Z' },
+        { title: 'Postdoctoral Fellow in Plant Biotechnology', company: { display_name: 'University of ' + country.toUpperCase() }, location: { display_name: 'Leeds' }, redirect_url: `https://adzuna/${country}/1`, description: 'molecular biology of crops', created: '2026-11-12T00:00:00Z' },
         { title: 'Sales Associate', company: { display_name: 'Retail Co' }, location: { display_name: 'X' }, redirect_url: `https://adzuna/${country}/2`, description: 'agriculture retail', created: '2026-11-12T00:00:00Z' },
       ] });
     }
     if (u.host.endsWith('myworkdayjobs.com')) {
       assert.equal(init.method, 'POST');
       if (u.host.startsWith('ntu')) return { ok: false, status: 503 };
-      return json({ jobPostings: [{ title: 'Research Fellow (Biochemistry)', externalPath: '/job/Kent-Ridge/RF_1', locationsText: 'Kent Ridge', postedOn: 'Posted 3 Days Ago' }] });
+      return json({ jobPostings: [{ title: 'Postdoctoral Fellow (Biochemistry)', externalPath: '/job/Kent-Ridge/RF_1', locationsText: 'Kent Ridge', postedOn: 'Posted 3 Days Ago' }] });
     }
     throw new Error('unexpected ' + url);
   };
@@ -85,7 +85,7 @@ test('collectAll merges sources, de-duplicates and reports failures', async () =
   assert.ok(!jobs.some((j) => j.company === 'Retail Co'), 'non-university employer dropped');
   const uni = jobs.filter((j) => j.category === 'university');
   assert.deepEqual([...new Set(uni.map((j) => j.market))].sort(), ['EMEA', 'SG', 'US']);
-  assert.equal(jobs.filter((j) => j.title === 'Research Fellow in Plant Biotechnology').length, 7, 'one per country, repeats across keyword searches collapsed');
+  assert.equal(jobs.filter((j) => j.title === 'Postdoctoral Fellow in Plant Biotechnology').length, 7, 'one per country, repeats across keyword searches collapsed');
   assert.ok(jobs.some((j) => j.category === 'industry' && j.sector === 'biotech'));
   const nus = jobs.find((j) => j.source === 'workday');
   assert.equal(nus.url, 'https://nus.wd3.myworkdayjobs.com/en-US/NUS/job/Kent-Ridge/RF_1');
@@ -121,4 +121,16 @@ test('resume and digest rendering escape content', () => {
   assert.match(resumeToMarkdown(r), /## Experience\n\*\*Lab, Uni\*\* \(2020-2024\)\n- Did <x>/);
   const d = digestHtml([{ category: 'university', market: 'SG', title: '<i>T</i>', company: 'NUS', url: 'https://x', score: 50 }]);
   assert.ok(d.includes('Universities: Singapore') && d.includes('&lt;i&gt;'));
+});
+
+test('university listings are limited to postdoc roles', () => {
+  const raw = [
+    { title: 'Postdoctoral Research Associate - Plant Breeding', company: 'Iowa State University', url: 'https://x/1', market: 'US', university: true, description: '' },
+    { title: 'Fellow (Post Doc)', company: 'Kansas State University', url: 'https://x/2', market: 'US', university: true, description: '' },
+    { title: 'Assistant Professor of Biology', company: 'Gordon State College', url: 'https://x/3', market: 'US', university: true, description: '' },
+    { title: 'Agronomist', company: 'DeltaAgri', url: 'https://x/4', market: 'IN', sector: 'agritech', description: 'crop science' },
+  ];
+  const titles = finalise(raw, DEFAULT_PROFILE).map((j) => j.title).sort();
+  assert.deepEqual(titles, ['Agronomist', 'Fellow (Post Doc)', 'Postdoctoral Research Associate - Plant Breeding']);
+  assert.equal(finalise(raw, { ...DEFAULT_PROFILE, universityRolesOnly: false }).length, 4);
 });
