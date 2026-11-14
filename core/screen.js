@@ -107,6 +107,7 @@ export function relevance(job, profile = {}, baseScore = 0) {
     if (isTopPriority(job)) r += 25;
     if (isUSJob(job) || isUKJob(job)) r += 10;
   }
+  if (isBiotechGenetics(job)) r -= 20;
   // Three or more of her known gaps is normally a skip, however good the field match.
   if (s.blockers.length >= 3) r = Math.min(r, 15);
   return Math.max(0, Math.min(100, Math.round(r)));
@@ -124,5 +125,10 @@ export const isUSJob = (job) => job.market === 'US';
 const MOVE_STATES_RE = /,\s*(CA|NJ|NY|CT)\b|\b(california|new jersey|new york|connecticut)\b/i;
 export const isMoveState = (job) => isUSJob(job) && MOVE_STATES_RE.test(job.location || '');
 export const isTopPriority = (job) => isTier1Employer(job) || isMoveState(job);
+
+// Biotechnology and genetics work is outside her skills notes: label it and rank it lower.
+// Applies to university and research posts; India industry keeps its Biotech sector as asked.
+const BIOTECH_GENETICS_RE = /\b(biotechnolog\w*|bio-?engineer\w*|genetic\w*|genetically|transgen\w*|gene editing|genome editing|crispr|gene silencing)/i;
+export const isBiotechGenetics = (job) => !isIndia(job) && BIOTECH_GENETICS_RE.test(`${job.title || ''}\n${job.description || ''}`);
 
 export const relevanceLevel = (r) => (r >= 50 ? 'High' : r >= 20 ? 'Medium' : 'Low');
