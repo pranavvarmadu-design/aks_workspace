@@ -35,6 +35,7 @@
     "https://jobs.bayer.com/*",
     "https://api.smartrecruiters.com/*",
     "https://jobs.smartrecruiters.com/*",
+    "https://jobs.sciencecareers.org/*",
     "http://localhost/*"
   ],
   "optional_host_permissions": [

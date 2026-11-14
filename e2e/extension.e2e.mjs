@@ -48,6 +48,7 @@ const replies = {
   hiring: { roleSummary: 'x', documentStyle: 'industry_resume', mustHave: ['PCR'], niceToHave: [], keywords: ['CRISPR'], responsibilities: [], applicationNotes: 'Two referees', screen: { sponsorship: 'not_offered', requiredSheLacks: ['CRISPR'], strengthsMatched: [], coreOutput: 'sequence data', verdict: 'skip', reason: 'CRISPR is required.' } },
   tailor: tailoredDoc,
   audit: { matchScore: 78, unsupportedClaims: [{ claim: 'Python', reason: 'not in master resume' }], coveredRequirements: ['PCR'], gaps: ['Python'], suggestions: ['Have you used Python?'] },
+  letter: { emailSubject: 'Application', emailBody: 'Please find attached.', salutation: 'Dear team,', paragraphs: ['I am applying.'], closing: 'Yours sincerely,', signature: 'Test Person' },
   read: { fieldKeywords: ['crop genomics', 'plant molecular biology', 'CRISPR', 'rice'], academicRoles: ['postdoctoral'], sectorQueries: { agritech: ['seed scientist'], biotech: [], pharma: [] }, skills: ['PCR'], seniority: 'early career' },
 };
 const apiBodies = [];
@@ -56,7 +57,7 @@ await ctx.route('https://api.anthropic.com/**', async (route) => {
   const body = req.postDataJSON();
   apiBodies.push({ body, headers: req.headers() });
   const sys = body.system;
-  const reply = sys.startsWith('You are a hiring') ? replies.hiring : sys.startsWith('You tailor') ? replies.tailor : sys.startsWith('You audit') ? replies.audit : replies.read;
+  const reply = sys.startsWith('You are a hiring') ? replies.hiring : sys.startsWith('You tailor') ? replies.tailor : sys.startsWith('You write a cover letter') ? replies.letter : sys.startsWith('You audit') ? replies.audit : replies.read;
   const ev = (type, data) => `event: ${type}\ndata: ${JSON.stringify({ type, ...data })}\n\n`;
   const sse = ev('message_start', { message: { id: 'm', type: 'message', role: 'assistant', model: body.model, content: [], stop_reason: null, usage: { input_tokens: 1, output_tokens: 1 } } }) +
     ev('content_block_start', { index: 0, content_block: { type: 'text', text: '' } }) +
@@ -119,7 +120,6 @@ await p.fill('#candidate-text', 'Does not have: CRISPR, cloning. Visa: no work a
 await p.click('#extract-profile');
 await p.waitForFunction(() => /Search keywords updated: crop genomics/.test(document.querySelector('#resume-msg').textContent));
 ok(JSON.parse(fs.readFileSync(path.join(DATA, 'config.json'))).profile.fieldKeywords[0] === 'crop genomics', 'resume keywords reach the backend');
-await p.check('#cover-letter');
 await p.click('#build');
 await p.waitForSelector('#screen-stop:not([hidden])');
 ok(/Probably not worth applying/.test(await p.textContent('#screen-stop')) && /CRISPR is required/.test(await p.textContent('#screen-stop')), 'skip verdict stops the build');
@@ -132,7 +132,7 @@ ok(/Advised: skip/.test(await p.textContent('#review')), 'verdict shown with the
 ok(/Fit for this role: 78\/100/.test(await p.textContent('#review')), 'review score shown');
 ok(/could not find these.*Python/s.test(await p.textContent('#review')), 'unsupported claim flagged');
 ok(/Ran PCR and CRISPR edits in rice/.test(await p.textContent('#preview')), 'tailored resume preview');
-ok((await p.inputValue('#letter')).startsWith('Dear team'), 'cover letter shown');
+ok((await p.inputValue('#letter')).startsWith('Dear team,'), 'cover letter shown');
 const t = apiBodies.find((b) => b.body.system.startsWith('You tailor'));
 ok(t.body.model === 'claude-opus-5-5' && t.body.stream === true && t.body.output_config.format.type === 'json_schema' && t.body.fallbacks === 'default', 'Claude request shape');
 ok(t.body.messages[0].content.includes('<candidate>') && t.body.messages[0].content.includes('Lead genomics for seed traits') === false && apiBodies.find((b) => b.body.system.startsWith('You are a hiring')).body.messages[0].content.includes('Lead genomics for seed traits'), 'job description goes to the analyst');

@@ -86,7 +86,13 @@ export async function collectAll({ fetchFn = fetch, profile, sources, keys = {},
   }
 
   for (const feed of sources.rss || [])
-    raw.push(...(await run(feed.name, () => rssCollect(fetchFn, feed))).map((j) => normaliseJob('rss', { ...j, market: feed.market, university: feed.university, sector: feed.sector })));
+    raw.push(...(await run(feed.name, () => rssCollect(fetchFn, feed))).map((j) => normaliseJob('rss', { ...j, market: j.market || feed.market, university: feed.university, sector: feed.sector })));
+
+  for (const kw of sources.scienceCareers || []) {
+    const feed = { name: `Science Careers: ${kw}`, url: `https://jobs.sciencecareers.org/jobsrss/?keywords=${encodeURIComponent(kw)}`, format: 'madgex', market: 'US', university: true };
+    raw.push(...(await run(feed.name, () => rssCollect(fetchFn, feed))).map((j) => normaliseJob('Science Careers', { ...j, university: true })));
+    await sleep(Math.min(throttleMs, 1500));
+  }
 
   for (const site of sources.workday || [])
     for (const kw of (profile.fieldKeywords || []).slice(0, 3)) {

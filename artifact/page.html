@@ -73,6 +73,16 @@ select { font: inherit; color: var(--ink); background: var(--surface); border: 1
 .verdict.borderline, .verdict.skip { background: var(--warn-soft); color: var(--warn); }
 #screen-stop { border-color: var(--warn); }
 #screen-stop h3 { margin: 0 0 6px; font: 600 16px var(--display); color: var(--warn); }
+.pipeline { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; margin: 4px 0 10px; }
+.pipeline button { display: grid; gap: 2px; padding: 8px 4px; border-radius: 6px; text-align: center; font-size: 12px; color: var(--muted); }
+.pipeline button strong { font: 600 18px var(--display); color: var(--ink); font-variant-numeric: tabular-nums; }
+.pipeline button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.pipeline button[aria-pressed="true"] strong { color: var(--accent); }
+.stage-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.stage-row select { padding: 4px 8px; }
+.job details { font-size: 13px; }
+.job details textarea { margin-top: 4px; }
+#lab-fit ul { margin: 4px 0 6px 18px; padding: 0; }
 #review .warn { background: var(--warn-soft); color: var(--warn); border-radius: 6px; padding: 10px; margin-bottom: 10px; }
 .preview { background: #fff; color: #111; border: 1px solid var(--line); border-radius: 8px; padding: 24px; margin: 10px 0; font: 13px/1.4 Georgia, 'Times New Roman', serif; overflow-wrap: anywhere; }
 .preview h1 { font: bold 20px Georgia, serif; margin: 0; color: #111; }
@@ -99,8 +109,9 @@ select { font: inherit; color: var(--ink); background: var(--surface); border: 1
     <div class="segmented" id="categories">
       <button data-cat="university" aria-pressed="true">Universities <span class="count"></span></button>
       <button data-cat="industry" aria-pressed="false">India industry <span class="count"></span></button>
-      <button data-cat="saved" aria-pressed="false">Saved <span class="count"></span></button>
+      <button data-cat="saved" aria-pressed="false">My applications <span class="count"></span></button>
     </div>
+    <div id="pipeline" class="pipeline" hidden></div>
     <div class="chips" id="filters"></div>
     <div class="toolbar" id="indeed-bar">
       <button id="indeed-run">Search Indeed</button>
@@ -126,30 +137,45 @@ select { font: inherit; color: var(--ink); background: var(--surface); border: 1
       <label>Job description. Paste the full posting text here for the best result.
         <textarea id="job-desc" rows="6"></textarea>
       </label>
-      <label class="check"><input type="checkbox" id="cover-letter"> Also write a cover letter</label>
+      <label>About the lab or PI (optional, recommended). Paste their lab website text, research summary or a few recent paper abstracts.
+        <textarea id="lab-text" rows="5"></textarea>
+      </label>
       <label>Anything to emphasise or leave out for this application (optional)
         <textarea id="notes" rows="2"></textarea>
       </label>
-      <button id="build" class="primary">Check fit and build resume</button>
+      <button id="build" class="primary">Check fit and build application</button>
       <div id="screen-stop" class="card" hidden></div>
       <ol id="steps" class="steps" hidden>
         <li data-step="analyst">Screening the listing against your skills</li>
-        <li data-step="tailor">Tailoring the resume</li>
+        <li data-step="tailor">Tailoring the resume to the lab</li>
+        <li data-step="letter">Writing the cover letter and email</li>
         <li data-step="reviewer">Checking every claim against your master resume</li>
       </ol>
       <p id="build-msg" class="error small"></p>
     </div>
     <div id="result" hidden>
       <div id="review" class="card"></div>
+      <div id="lab-fit" class="card" hidden></div>
+      <h2>Application package</h2>
       <div class="toolbar">
-        <button id="dl-docx">Download Word file</button>
-        <button id="dl-html">Download for printing (HTML)</button>
-        <button id="copy-md">Copy as Markdown</button>
+        <button id="dl-package" class="primary">Download package (.zip)</button>
+        <button id="dl-docx">Resume (.docx)</button>
+        <button id="dl-letter">Cover letter (.docx)</button>
+        <button id="mark-applied">Mark as applied</button>
       </div>
+      <p id="package-msg" class="small muted"></p>
+      <h2>Email</h2>
+      <label>Subject <input id="email-subject"></label>
+      <label>Message <textarea id="email-body" rows="5"></textarea></label>
+      <button id="copy-email">Copy email</button>
+      <h2>Cover letter</h2>
+      <p class="small muted">Edit freely; downloads use your edited text.</p>
+      <textarea id="letter" rows="16" aria-label="Cover letter"></textarea>
+      <h2>Tailored resume</h2>
       <div id="preview" class="preview"></div>
-      <div id="letter-wrap" hidden>
-        <h2>Cover letter</h2>
-        <textarea id="letter" rows="12"></textarea>
+      <div class="toolbar">
+        <button id="dl-html">Resume for printing (HTML)</button>
+        <button id="copy-md">Copy resume as Markdown</button>
       </div>
     </div>
   </section>

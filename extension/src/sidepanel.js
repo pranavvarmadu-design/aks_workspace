@@ -289,8 +289,9 @@ function showResult(t) {
     list('Add these to your master resume if they apply', r.suggestions) +
     (t.analysis.applicationNotes ? `<strong>The listing also asks for</strong><p class="small">${esc(t.analysis.applicationNotes)}</p>` : '');
   $('#preview').innerHTML = resumeToHtml(t.resume, { standalone: false });
-  $('#letter-wrap').hidden = !t.resume.coverLetter;
-  $('#letter').value = t.resume.coverLetter || '';
+  const L = t.letter;
+  $('#letter-wrap').hidden = !L;
+  $('#letter').value = L ? [L.salutation, ...(L.paragraphs || []), L.closing, L.signature].filter(Boolean).join('\n\n') : '';
 }
 
 async function runBuild(force) {
@@ -300,14 +301,14 @@ async function runBuild(force) {
   $('#build-msg').textContent = '';
   $('#screen-stop').hidden = true;
   $('#steps').hidden = false;
-  const order = ['analyst', 'tailor', 'reviewer'];
+  const order = ['analyst', 'tailor', 'letter', 'reviewer'];
   const mark = (step) => {
     for (const li of $$('#steps li')) {
       const i = order.indexOf(li.dataset.step), cur = order.indexOf(step);
       li.className = i < cur ? 'done' : i === cur ? 'active' : '';
     }
   };
-  const opts = { coverLetter: $('#cover-letter').checked, notes: $('#notes').value.trim(), candidate: state.candidate };
+  const opts = { notes: $('#notes').value.trim(), candidate: state.candidate };
   try {
     if (!state.resume.trim()) throw new Error('Paste your resume in the Resume builder tab first.');
     mark('analyst');

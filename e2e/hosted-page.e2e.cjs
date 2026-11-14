@@ -58,8 +58,9 @@ const DETAIL = `### Research Fellow\n        **Job Id:** JOBSEARCH_1\n\n        
     window.__prompts = prompts;
     const reply = (prompt) => {
       if (prompt.startsWith('From this job posting')) return { title: 'Senior Scientist', company: 'GreenGene', location: 'Pune' };
-      if (prompt.startsWith('You are a hiring analyst')) return { roleSummary: 'x', documentStyle: 'industry_resume', mustHave: ['CRISPR'], niceToHave: [], keywords: [], responsibilities: [], applicationNotes: 'Two referees', screen: { sponsorship: 'not_applicable', requiredSheLacks: ['CRISPR'], strengthsMatched: [], coreOutput: 'constructs', verdict: 'skip', reason: 'CRISPR is required and is on her does-not-have list.' } };
+      if (prompt.startsWith('You are a hiring analyst')) return { contact: { name: 'Dr Rao', title: 'Group Leader' }, labResearch: { focus: 'Floral anatomy of crops', themes: ['nectary development'], methods: ['SEM'] }, fitToLab: [{ labNeed: 'Nectary anatomy', herEvidence: 'PhD on nectaries' }], roleSummary: 'x', documentStyle: 'industry_resume', mustHave: ['CRISPR'], niceToHave: [], keywords: [], responsibilities: [], applicationNotes: 'Two referees', screen: { sponsorship: 'not_applicable', requiredSheLacks: ['CRISPR'], strengthsMatched: [], coreOutput: 'constructs', verdict: 'skip', reason: 'CRISPR is required and is on her does-not-have list.' } };
       if (prompt.startsWith('You tailor')) return { name: 'Test Person', headline: 'Plant biologist', contact: 't@e.x', summary: 'Summary', sections: [{ title: 'Experience', entries: [{ heading: 'RA', subheading: 'Inst', dates: '2021-2025', bullets: ['Prepared samples for and interpreted GC-MS'] }] }], coverLetter: '' };
+      if (prompt.startsWith('You write a cover letter')) return { emailSubject: 'Application: Senior Scientist', emailBody: 'Dear Dr Rao, please find attached my resume and cover letter.', salutation: 'Dear Dr Rao,', paragraphs: ['I am writing to apply.', 'Your lab studies floral anatomy.'], closing: 'Yours sincerely,', signature: 'Test Person' };
       if (prompt.startsWith('You audit')) return { matchScore: 64, unsupportedClaims: [{ claim: 'CRISPR', reason: 'not in master resume' }], coveredRequirements: [], gaps: ['CRISPR'], suggestions: [] };
       return { fieldKeywords: ['floral biology', 'pollination biology', 'plant anatomy', 'nectar'], academicRoles: ['postdoctoral'], sectorQueries: { agritech: ['agronomist'], biotech: ['plant tissue culture'], pharma: ['phytochemistry'] }, skills: ['microscopy'], seniority: 'early career' };
     };
@@ -99,10 +100,11 @@ const DETAIL = `### Research Fellow\n        **Job Id:** JOBSEARCH_1\n\n        
   await p.click('#add-job');
   await p.waitForFunction(() => /Added "Senior Scientist"/.test(document.querySelector('#add-msg').textContent));
   await p.locator('.job [data-act=tailor]').first().click();
+  await p.fill('#lab-text', 'The Rao lab studies nectary development and floral anatomy in crops.');
   await p.click('#build');
   await p.waitForSelector('#screen-stop:not([hidden])');
   ok(/Probably not worth applying/.test(await p.textContent('#screen-stop')), 'screen stops a poor match before tailoring');
-  ok(await p.evaluate(() => window.__prompts.at(-1).includes('<candidate>')), 'screen sees the skills notes');
+  ok(await p.evaluate(() => window.__prompts.at(-1).includes('<candidate>') && window.__prompts.at(-1).includes('<lab>')), 'screen sees the skills notes and the lab text');
   ok(await p.locator('#result').isHidden(), 'nothing tailored yet');
   await p.click('#build-anyway');
   await p.waitForSelector('#result:not([hidden])');
@@ -111,22 +113,38 @@ const DETAIL = `### Research Fellow\n        **Job Id:** JOBSEARCH_1\n\n        
   ok(await p.evaluate(() => window.__prompts.filter((x) => x.startsWith('You are a hiring analyst')).length === 1), 'screen not re-run after Build anyway');
   const review = await p.textContent('#review');
   ok(/Advised: skip/.test(review) && /64\/100/.test(review) && /CRISPR/.test(review), 'verdict, score and flagged claim shown');
-  await p.click('#dl-docx');
+  ok(/Dr Rao, Group Leader/.test(await p.textContent('#lab-fit')) && /Nectary anatomy/.test(await p.textContent('#lab-fit')), 'lab research and fit shown');
+  ok((await p.inputValue('#letter')).startsWith('Dear Dr Rao,') && (await p.inputValue('#email-subject')) === 'Application: Senior Scientist', 'cover letter and email written');
+  ok(await p.evaluate(() => window.__prompts.find((x) => x.startsWith('You audit')).includes('<letter>')), 'reviewer audits the letter too');
+  await p.fill('#letter', 'Dear Dr Rao,\n\nEdited letter text.\n\nYours sincerely,\nTest Person');
+  await p.dispatchEvent('#letter', 'change');
+  await p.click('#dl-package');
   await p.waitForFunction(() => window.__saved);
-  const saved = await p.evaluate(() => window.__saved);
-  ok(saved.name === 'Test Person - GreenGene.docx' && saved.size > 800, 'Word file offered: ' + saved.name);
+  const pkg = await p.evaluate(() => window.__saved);
+  ok(pkg.name === 'Test Person - GreenGene - Application.zip' && pkg.size > 2000, 'application package offered: ' + pkg.name);
+  await p.evaluate(() => { window.__saved = null; });
+  await p.click('#dl-letter');
+  await p.waitForFunction(() => window.__saved);
+  ok((await p.evaluate(() => window.__saved.name)) === 'Test Person - GreenGene - Cover letter.docx', 'cover letter download');
+  const b64 = await p.evaluate(async () => { const blob = await window.__buildLetterDocx('Test Person', 'Dear Dr Rao,\n\nOne & <two>.'); const u = new Uint8Array(await blob.arrayBuffer()); let s = ''; for (const c of u) s += String.fromCharCode(c); return btoa(s); });
+  require('fs').writeFileSync((process.argv[2] || '/tmp/hosted.png').replace(/\.png$/, '-letter.docx'), Buffer.from(b64, 'base64'));
 
-  // Indeed: one button per segment
+  // Pipeline
+  await p.click('#mark-applied');
   await p.click('[data-tab=jobs]');
+  await p.click('[data-cat=saved]');
+  const pipe = await p.textContent('#pipeline');
+  ok(/1Applied/.test(pipe.replace(/\s+/g, '')), 'pipeline counts the application: ' + pipe.replace(/\s+/g, ' '));
+  ok(/since/.test(await p.textContent('.stage-row')), 'stage date shown');
+  await p.selectOption('.job select[data-act=stage]', 'interview');
+  ok(/1Interview/.test((await p.textContent('#pipeline')).replace(/\s+/g, '')), 'stage moved to Interview');
+  await p.click('.job details summary');
+  await p.fill('.job textarea[data-act=note]', 'Interview 2 Dec with Dr Rao');
+  await p.dispatchEvent('.job textarea[data-act=note]', 'change');
+
+  // Indeed only in the India industry tab
   await p.click('[data-cat=university]');
-  ok((await p.textContent('#indeed-run')) === 'Search all countries', 'Universities: Search all countries');
-  await p.click('#indeed-run');
-  await p.waitForFunction(() => /^Indeed: /.test(document.querySelector('#indeed-msg').textContent), null, { timeout: 60000 });
-  const calls = await p.evaluate(() => window.__mcp);
-  ok(new Set(calls.filter((c) => c[1] === 'search_jobs').map((c) => c[2].country_code)).size >= 20, 'searched 20+ countries');
-  ok(/Plant Biotechnology/.test(await p.textContent('#job-list')), 'Singapore research fellow found');
-  await p.click('[data-filter=SG]');
-  ok(/Visa: Yes/.test(await p.locator('.job').first().textContent()), 'detail read: Visa: Yes');
+  ok(await p.locator('#indeed-bar').isHidden(), 'no Indeed button in Universities');
   await p.click('[data-cat=industry]');
   ok((await p.textContent('#indeed-run')) === 'Search Indeed: India industry', 'India tab: Search Indeed');
   await p.click('#indeed-run');
@@ -140,7 +158,9 @@ const DETAIL = `### Research Fellow\n        **Job Id:** JOBSEARCH_1\n\n        
   await p.waitForSelector('.job');
   ok((await p.inputValue('#candidate-text')).includes('Does not have'), 'skills notes reload');
   await p.click('[data-cat=saved]');
-  ok(/Resume ready/.test(await p.textContent('#job-list')), 'tailored resume kept');
+  ok(/Open application/.test(await p.textContent('#job-list')), 'application kept');
+  ok((await p.inputValue('.job textarea[data-act=note]')) === 'Interview 2 Dec with Dr Rao', 'notes kept');
+  ok(/1Interview/.test((await p.textContent('#pipeline')).replace(/\s+/g, '')), 'stage kept');
   await p.click('[data-cat=industry]');
   ok(/Syngenta Biologicals/.test(await p.textContent('#job-list')), 'Indeed results kept');
   ok(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'no sideways scroll at phone width');

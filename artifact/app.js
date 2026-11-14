@@ -11,7 +11,7 @@ import { esc, resumeToHtml, resumeToMarkdown } from '../core/resume.js';
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 const view = { sort: 'relevance', cat: 'university', filter: 'all', query: '', target: null };
-const state = { candidate: '', jobs: [], captured: [], jobState: {}, tailored: {}, descriptions: {}, resume: '', profile: DEFAULT_PROFILE, status: null };
+const state = { candidate: '', stageLog: {}, jobNotes: {}, labTexts: {}, jobs: [], captured: [], jobState: {}, tailored: {}, descriptions: {}, resume: '', profile: DEFAULT_PROFILE, status: null };
 let db, mine, sample, downloads, mcp;
 
 const notice = (msg) => { $('#notice').hidden = !msg; $('#notice').textContent = msg || ''; };
@@ -28,8 +28,17 @@ for (const b of $$('.tabs button')) b.onclick = () => showTab(b.dataset.tab);
 const withText = (j) => (state.descriptions[j.id] ? { ...j, description: state.descriptions[j.id] } : j);
 const allJobs = () => [...state.captured, ...state.jobs].map(withText);
 const stateOf = (j) => state.jobState[j.id];
+// The application pipeline: each saved job sits in one stage; stageLog keeps the date it moved.
+const STAGES = [['saved', 'Shortlisted'], ['applied', 'Applied'], ['interview', 'Interview'], ['offer', 'Offer'], ['rejected', 'Not successful']];
+const STAGE_KEYS = STAGES.map(([k]) => k);
+const saveState = () => put('state', { map: state.jobState, log: state.stageLog, notes: state.jobNotes });
+function setStage(id, stage) {
+  if (stage) state.jobState[id] = stage; else delete state.jobState[id];
+  if (stage) state.stageLog[id] = { ...state.stageLog[id], [stage]: new Date().toISOString() };
+  saveState();
+}
 const jobsFor = (cat) => cat === 'saved'
-  ? allJobs().filter((j) => ['saved', 'applied'].includes(stateOf(j)))
+  ? allJobs().filter((j) => STAGE_KEYS.includes(stateOf(j)))
   : state.jobs.map(withText).filter((j) => j.category === cat && stateOf(j) !== 'hidden');
 
 function ago(d) {
@@ -45,7 +54,7 @@ function renderJobs() {
   }
   const options = view.cat === 'university' ? Object.entries(MARKETS).map(([k, m]) => [k, m.label])
     : view.cat === 'industry' ? Object.entries(SECTORS).map(([k, s]) => [k, s.label])
-    : [['saved', 'Shortlisted'], ['applied', 'Applied']];
+    : STAGES;
   $('#filters').innerHTML = [['all', 'All'], ...options]
     .map(([k, l]) => `<button data-filter="${k}" aria-pressed="${view.filter === k}">${esc(l)}</button>`).join('');
   const q = view.query.toLowerCase();
@@ -59,11 +68,39 @@ function renderJobs() {
   const newest = (a, b) => String(b.postedAt || b.firstSeen).localeCompare(String(a.postedAt || a.firstSeen));
   list.sort(view.sort === 'newest' ? newest : (a, b) => b.rel - a.rel || newest(a, b));
   $('#sort').value = view.sort;
+  renderPipeline();
   // Each segment has its own Indeed search; Saved has none.
-  $('#indeed-bar').hidden = view.cat === 'saved';
-  $('#indeed-run').textContent = view.cat === 'industry' ? 'Search Indeed: India industry' : 'Search all countries';
-  $('#indeed-run').title = view.cat === 'industry' ? 'Searches Indeed India for her agritech, biotech and pharma roles' : 'Searches postdoc-level roles in 24 countries, in each country\'s own job titles (through Indeed)';
+  $('#indeed-bar').hidden = view.cat !== 'industry';
+  $('#indeed-run').textContent = 'Search Indeed: India industry';
   $('#job-list').innerHTML = list.length ? list.slice(0, 200).map(jobCard).join('') : `<div class="empty">${emptyText()}</div>`;
+}
+
+function renderPipeline() {
+  const el = $('#pipeline');
+  el.hidden = view.cat !== 'saved';
+  if (el.hidden) return;
+  const mine = jobsFor('saved');
+  el.innerHTML = STAGES.map(([k, label]) =>
+    `<button data-filter="${k}" aria-pressed="${view.filter === k}"><strong>${mine.filter((j) => stateOf(j) === k).length}</strong>${esc(label)}</button>`).join('');
+}
+$('#pipeline').onclick = (e) => {
+  const b = e.target.closest('button');
+  if (b) { view.filter = view.filter === b.dataset.filter ? 'all' : b.dataset.filter; renderJobs(); }
+};
+
+const fmtDate = (iso) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+function stageRow(j) {
+  const st = stateOf(j);
+  const log = state.stageLog[j.id] || {};
+  const when = log[st] ? `since ${fmtDate(log[st])}` : '';
+  const applied = log.applied ? `applied ${fmtDate(log.applied)}` : '';
+  const waiting = st === 'applied' && log.applied && (Date.now() - new Date(log.applied)) / 864e5 > 14;
+  return `<div class="stage-row">
+    <select data-act="stage" aria-label="Application stage">${STAGES.map(([k, l]) => `<option value="${k}" ${k === st ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>
+    <span>${esc([when, st !== 'applied' ? applied : ''].filter(Boolean).join(' · '))}</span>
+    ${waiting ? '<span class="tag warn">No reply after 2 weeks: follow up?</span>' : ''}
+  </div>
+  <details${state.jobNotes[j.id] ? ' open' : ''}><summary>Notes</summary><textarea data-act="note" rows="2" placeholder="Contact, follow-up dates, interview notes">${esc(state.jobNotes[j.id] || '')}</textarea></details>`;
 }
 
 function emptyText() {
@@ -99,7 +136,7 @@ function screenTags(j) {
 function jobCard(j) {
   const st = stateOf(j);
   const tags = [
-    st === 'applied' ? '<span class="tag state">Applied</span>' : '',
+    st && st !== 'saved' && view.cat !== 'saved' ? `<span class="tag state">${esc(STAGES.find(([k]) => k === st)?.[1] || st)}</span>` : '',
     j.category === 'university' ? `<span class="tag">${esc(MARKETS[j.market]?.label || j.market || '')}</span>` : '',
     j.category === 'industry' ? `<span class="tag">${esc(SECTORS[j.sector]?.label || '')}</span>` : '',
     j.feed ? `<span class="tag">${esc(j.feed)}</span>` : '',
@@ -115,10 +152,11 @@ function jobCard(j) {
     <h3>${title}</h3>
     <div class="meta">${esc([j.company, j.location, ago(j.postedAt || j.firstSeen)].filter(Boolean).join(' · '))}</div>
     <div class="tags">${tags}</div>
+    ${view.cat === 'saved' ? stageRow(j) : ''}
     <div class="actions">
-      <button data-act="tailor" class="primary">${state.tailored[j.id] ? 'Open resume' : 'Tailor resume'}</button>
-      ${st === 'saved' || st === 'applied' ? '<button data-act="unsave">Remove</button>' : '<button data-act="saved">Shortlist</button>'}
-      ${st === 'applied' ? '' : '<button data-act="applied">Mark applied</button>'}
+      <button data-act="tailor" class="primary">${state.tailored[j.id] ? 'Open application' : 'Tailor application'}</button>
+      ${st ? '<button data-act="unsave">Remove</button>' : '<button data-act="saved">Shortlist</button>'}
+      ${st && st !== 'saved' ? '' : '<button data-act="applied">Mark applied</button>'}
       ${st || j.category === 'captured' ? '' : '<button data-act="hidden">Hide</button>'}
     </div>
   </article>`;
@@ -195,7 +233,7 @@ async function runIndeed(kind) {
     btn.disabled = false;
   }
 }
-$('#indeed-run').onclick = () => runIndeed(view.cat);
+$('#indeed-run').onclick = () => runIndeed('industry');
 
 $('#job-list').onclick = async (e) => {
   const b = e.target.closest('button[data-act]');
@@ -205,14 +243,23 @@ $('#job-list').onclick = async (e) => {
   const act = b.dataset.act;
   if (act === 'tailor') return setTarget(j);
   if (act === 'unsave') {
-    delete state.jobState[id];
+    setStage(id, null);
     if (j.category === 'captured') {
       state.captured = state.captured.filter((c) => c.id !== id);
       put(`c_${id}`, null);
     }
-  } else state.jobState[id] = act;
-  put('state', { map: state.jobState });
+  } else if (act === 'hidden') {
+    state.jobState[id] = 'hidden';
+    saveState();
+  } else setStage(id, act);
   renderJobs();
+};
+$('#job-list').onchange = (e) => {
+  const el = e.target.closest('[data-act]');
+  if (!el) return;
+  const id = el.closest('.job').dataset.id;
+  if (el.dataset.act === 'stage') { setStage(id, el.value); renderJobs(); }
+  if (el.dataset.act === 'note') { state.jobNotes[id] = el.value; saveState(); }
 };
 
 function rescore() {
@@ -267,9 +314,8 @@ $('#add-job').onclick = async () => {
   const id = 'c' + Date.now().toString(36);
   const j = { id, category: 'captured', source: 'added by you', title: String(head.title || 'Untitled job').slice(0, 200), company: String(head.company || ''), location: String(head.location || ''), url: /^https?:\/\//.test($('#add-url').value.trim()) ? $('#add-url').value.trim() : '', description: text.slice(0, 20000), firstSeen: new Date().toISOString() };
   state.captured.unshift(j);
-  state.jobState[id] = 'saved';
   await put(`c_${id}`, j);
-  await put('state', { map: state.jobState });
+  setStage(id, 'saved');
   $('#add-text').value = $('#add-url').value = '';
   msg.textContent = `Added "${j.title}".`;
   btn.disabled = false;
@@ -302,12 +348,15 @@ function setTarget(j) {
     (j.url ? `<br><a class="small" href="${esc(j.url)}" target="_blank" rel="noopener">Open the posting</a>` : '');
   $('#builder-form').hidden = false;
   $('#job-desc').value = state.descriptions[j.id] ?? j.description ?? '';
+  $('#lab-text').value = state.labTexts[j.id] || '';
   $('#build-msg').textContent = state.resume.trim() ? '' : 'Add your resume in the My resume tab first.';
   $('#screen-stop').hidden = true;
   view.pendingAnalysis = null;
   showResult(state.tailored[j.id]);
   showTab('builder');
 }
+
+const letterToText = (L) => [L.salutation, ...(L.paragraphs || []), L.closing, L.signature].filter(Boolean).join('\n\n');
 
 function showResult(t) {
   $('#result').hidden = !t;
@@ -316,14 +365,24 @@ function showResult(t) {
   const list = (title, items) => items?.length ? `<strong>${title}</strong><ul>${items.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '';
   $('#review').innerHTML = screenHtml(t.analysis.screen) + `<h3>Fit for this role: ${Number(r.matchScore) || 0}/100</h3>` +
     (r.unsupportedClaims?.length
-      ? `<div class="warn"><strong>Check before sending.</strong> The reviewer could not find these in your master resume:<ul>${r.unsupportedClaims.map((c) => `<li>${esc(c.claim)} <span class="small">(${esc(c.reason)})</span></li>`).join('')}</ul></div>`
-      : '<p class="small">Every claim was found in your master resume.</p>') +
+      ? `<div class="warn"><strong>Check before sending.</strong> The reviewer could not find these in your master resume or notes:<ul>${r.unsupportedClaims.map((c) => `<li>${esc(c.claim)} <span class="small">(${esc(c.reason)})</span></li>`).join('')}</ul></div>`
+      : '<p class="small">Every claim in the resume and letter was found in your master resume.</p>') +
     list('Requirements not shown in your resume', r.gaps) +
     list('Add these to your master resume if they apply', r.suggestions) +
     (t.analysis.applicationNotes ? `<strong>The listing also asks for</strong><p class="small">${esc(t.analysis.applicationNotes)}</p>` : '');
+  const a = t.analysis;
+  const lab = a.labResearch || {};
+  $('#lab-fit').hidden = !(lab.focus || a.fitToLab?.length);
+  $('#lab-fit').innerHTML = `<h3>${esc(a.contact?.name ? `${a.contact.name}${a.contact.title ? `, ${a.contact.title}` : ''}` : 'The lab')}</h3>` +
+    (lab.focus ? `<p class="small">${esc(lab.focus)}</p>` : '') +
+    list('Research themes', lab.themes) + list('Methods the lab relies on', lab.methods) +
+    (a.fitToLab?.length ? `<strong>Where she fits</strong><ul>${a.fitToLab.map((f) => `<li>${esc(f.labNeed)}: <span class="small">${esc(f.herEvidence)}</span></li>`).join('')}</ul>` : '');
   $('#preview').innerHTML = resumeToHtml(t.resume, { standalone: false });
-  $('#letter-wrap').hidden = !t.resume.coverLetter;
-  $('#letter').value = t.resume.coverLetter || '';
+  $('#letter').value = t.letterText || (t.letter ? letterToText(t.letter) : '');
+  $('#email-subject').value = t.email?.subject || '';
+  $('#email-body').value = t.email?.body || '';
+  $('#mark-applied').textContent = stateOf(view.target) === 'applied' ? 'Applied ✓' : 'Mark as applied';
+  $('#package-msg').textContent = '';
 }
 
 const VERDICT = { apply: 'Worth applying', borderline: 'Borderline', skip: 'Advised: skip' };
@@ -345,12 +404,17 @@ async function runBuild(force) {
     put(`d_${j.id}`, { text: description });
   }
   const job = { ...j, description };
+  const labText = $('#lab-text').value.trim();
+  if (labText !== (state.labTexts[j.id] || '')) {
+    state.labTexts[j.id] = labText;
+    put(`l_${j.id}`, { text: labText });
+  }
   const btn = $('#build');
   btn.disabled = true;
   msg.textContent = '';
   $('#screen-stop').hidden = true;
   $('#steps').hidden = false;
-  const order = ['analyst', 'tailor', 'reviewer'];
+  const order = ['analyst', 'tailor', 'letter', 'reviewer'];
   const mark = (step) => {
     for (const li of $$('#steps li')) {
       const i = order.indexOf(li.dataset.step), cur = order.indexOf(step);
@@ -358,9 +422,9 @@ async function runBuild(force) {
     }
   };
   try {
-    const opts = { coverLetter: $('#cover-letter').checked, notes: $('#notes').value.trim(), candidate: state.candidate };
+    const opts = { notes: $('#notes').value.trim(), candidate: state.candidate };
     mark('analyst');
-    const analysis = (force && view.pendingAnalysis) || await ask(AGENTS.analyst, AGENTS.analyst.user(job, state.candidate), 'default');
+    const analysis = (force && view.pendingAnalysis) || await ask(AGENTS.analyst, AGENTS.analyst.user(job, state.candidate, labText), 'default');
     // The playbook's 30-second screen: stop before tailoring when she would be ruled out.
     if (!force && analysis.screen?.verdict === 'skip') {
       view.pendingAnalysis = analysis;
@@ -371,9 +435,11 @@ async function runBuild(force) {
     }
     mark('tailor');
     const resume = await ask(AGENTS.tailor, AGENTS.tailor.user(state.resume, job, analysis, opts), 'complex');
+    mark('letter');
+    const letter = await ask(AGENTS.letter, AGENTS.letter.user(state.resume, job, analysis, resume, state.candidate, opts.notes), 'complex');
     mark('reviewer');
-    const review = await ask(AGENTS.reviewer, AGENTS.reviewer.user(state.resume, resume, analysis, state.candidate), 'default');
-    const t = { analysis, resume, review, builtAt: new Date().toISOString() };
+    const review = await ask(AGENTS.reviewer, AGENTS.reviewer.user(state.resume, resume, analysis, state.candidate, letter), 'default');
+    const t = { analysis, resume, letter, letterText: letterToText(letter), email: { subject: letter.emailSubject, body: letter.emailBody }, review, builtAt: new Date().toISOString() };
     view.pendingAnalysis = null;
     state.tailored[j.id] = t;
     put(`t_${j.id}`, t);
@@ -405,10 +471,24 @@ async function offer(filename, data, btn) {
 }
 
 // A minimal Word document: one paragraph per line of the resume.
-async function buildDocx(r) {
-  const x = (s) => esc(s).replace(/&quot;/g, '"');
+function docxParts() {
+  const x = (t) => esc(t).replace(/&quot;/g, '"');
   const run = (t, bold, size) => `<w:r><w:rPr>${bold ? '<w:b/>' : ''}<w:sz w:val="${size}"/></w:rPr><w:t xml:space="preserve">${x(t)}</w:t></w:r>`;
-  const p = (inner, extra = '') => `<w:p><w:pPr><w:spacing w:after="60"/>${extra}</w:pPr>${inner}</w:p>`;
+  const p = (inner, extra = '', after = 60) => `<w:p><w:pPr><w:spacing w:after="${after}"/>${extra}</w:pPr>${inner}</w:p>`;
+  return { run, p };
+}
+
+function docxBlob(body) {
+  const zip = new JSZip();
+  zip.file('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>');
+  zip.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
+  zip.file('word/document.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr></w:body></w:document>`);
+  return zip.generateAsync({ type: 'blob' });
+}
+
+// A minimal Word document: one paragraph per line of the resume.
+async function buildDocx(r) {
+  const { run, p } = docxParts();
   const parts = [p(run(r.name, true, 36))];
   if (r.headline) parts.push(p(run(r.headline, false, 22)));
   if (r.contact) parts.push(p(run(r.contact, false, 19)));
@@ -419,18 +499,59 @@ async function buildDocx(r) {
     for (const e of s.entries || []) {
       const head = [e.heading, e.subheading].filter(Boolean).join(', ');
       if (head || e.dates) parts.push(p(run(head, true, 21) + (e.dates ? `<w:r><w:tab/></w:r>${run(e.dates, false, 21)}` : ''), '<w:tabs><w:tab w:val="right" w:pos="9638"/></w:tabs>'));
-      for (const b of e.bullets || []) parts.push(p(run('•\t' + b, false, 21), '<w:tabs><w:tab w:val="left" w:pos="284"/></w:tabs><w:ind w:left="284" w:hanging="284"/>'));
+      for (const b of e.bullets || []) parts.push(p(run('\u2022\t' + b, false, 21), '<w:tabs><w:tab w:val="left" w:pos="284"/></w:tabs><w:ind w:left="284" w:hanging="284"/>'));
     }
   }
-  const zip = new JSZip();
-  zip.file('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>');
-  zip.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
-  zip.file('word/document.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${parts.join('')}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr></w:body></w:document>`);
-  return zip.generateAsync({ type: 'blob' });
+  return docxBlob(parts.join(''));
 }
-window.__buildDocx = buildDocx; // used by the automated check
 
-$('#dl-docx').onclick = async (e) => offer(fileName('.docx'), await buildDocx(current()), e.target);
+// The cover letter as Word: her name, the date, then the (edited) letter text.
+function buildLetterDocx(name, text) {
+  const { run, p } = docxParts();
+  const date = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  const body = [p(run(name, true, 28)), p(run(date, false, 21), '', 240),
+    ...text.split(/\n\s*\n/).map((para) => p(para.split('\n').map((line, i) => (i ? '<w:r><w:br/></w:r>' : '') + run(line, false, 22)).join(''), '', 180))];
+  return docxBlob(body.join(''));
+}
+window.__buildDocx = buildDocx;
+window.__buildLetterDocx = buildLetterDocx; // used by the automated check
+
+const currentT = () => state.tailored[view.target?.id];
+const base = () => `${current().name} - ${view.target.company || view.target.title}`.replace(/[^\w .-]+/g, '').trim().slice(0, 70);
+function keepEdits() {
+  const t = currentT();
+  if (!t) return;
+  t.letterText = $('#letter').value;
+  t.email = { subject: $('#email-subject').value, body: $('#email-body').value };
+  put(`t_${view.target.id}`, t);
+}
+for (const id of ['#letter', '#email-subject', '#email-body']) $(id).addEventListener('change', keepEdits);
+
+$('#dl-docx').onclick = async (e) => offer(`${base()} - Resume.docx`, await buildDocx(current()), e.target);
+$('#dl-letter').onclick = async (e) => { keepEdits(); offer(`${base()} - Cover letter.docx`, await buildLetterDocx(current().name, $('#letter').value), e.target); };
+$('#dl-package').onclick = async (e) => {
+  keepEdits();
+  const zip = new JSZip();
+  zip.file(`${base()} - Resume.docx`, await buildDocx(current()));
+  zip.file(`${base()} - Cover letter.docx`, await buildLetterDocx(current().name, $('#letter').value));
+  zip.file('Email.txt', `Subject: ${$('#email-subject').value}\n\n${$('#email-body').value}\n`);
+  await offer(`${base()} - Application.zip`, await zip.generateAsync({ type: 'blob' }), e.target);
+  $('#package-msg').textContent = 'Attach the two Word files to your email. When it is sent, choose "Mark as applied".';
+};
+$('#copy-email').onclick = async (e) => {
+  try {
+    await navigator.clipboard.writeText(`Subject: ${$('#email-subject').value}\n\n${$('#email-body').value}`);
+    e.target.textContent = 'Copied';
+  } catch {
+    e.target.textContent = 'Copy is blocked here; select the text instead';
+  }
+  setTimeout(() => (e.target.textContent = 'Copy email'), 2000);
+};
+$('#mark-applied').onclick = (e) => {
+  setStage(view.target.id, 'applied');
+  e.target.textContent = 'Applied ✓';
+  renderJobs();
+};
 $('#dl-html').onclick = (e) => offer(fileName('.html'), resumeToHtml(current()), e.target);
 $('#copy-md').onclick = async (e) => {
   const md = resumeToMarkdown(current());
@@ -507,7 +628,8 @@ $('#extract-profile').onclick = async (e) => {
       const v = x.data();
       if (x.id === 'resume') state.resume = v.text || '';
       else if (x.id === 'candidate') state.candidate = v.text || '';
-      else if (x.id === 'state') state.jobState = v.map || {};
+      else if (x.id === 'state') { state.jobState = v.map || {}; state.stageLog = v.log || {}; state.jobNotes = v.notes || {}; }
+      else if (x.id.startsWith('l_')) state.labTexts[x.id.slice(2)] = v.text || '';
       else if (x.id.startsWith('t_')) state.tailored[x.id.slice(2)] = v;
       else if (x.id.startsWith('d_')) state.descriptions[x.id.slice(2)] = v.text || '';
       else if (x.id.startsWith('c_')) state.captured.push(v);

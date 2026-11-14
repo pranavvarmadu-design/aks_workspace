@@ -60,7 +60,9 @@ export async function buildTailoredResume(settings, resume, job, opts, onStep = 
   const analysis = opts.analysis || await analyseJob(settings, job, opts.candidate);
   onStep('tailor');
   const tailored = await runAgent(settings, AGENTS.tailor, AGENTS.tailor.user(resume, job, analysis, opts), { effort: 'high', maxTokens: 32000 });
+  onStep('letter');
+  const letter = await runAgent(settings, AGENTS.letter, AGENTS.letter.user(resume, job, analysis, tailored, opts.candidate, opts.notes), { effort: 'high', maxTokens: 16000 });
   onStep('reviewer');
-  const review = await runAgent(settings, AGENTS.reviewer, AGENTS.reviewer.user(resume, tailored, analysis, opts.candidate), { effort: 'medium', maxTokens: 8000 });
-  return { analysis, resume: tailored, review, builtAt: new Date().toISOString() };
+  const review = await runAgent(settings, AGENTS.reviewer, AGENTS.reviewer.user(resume, tailored, analysis, opts.candidate, letter), { effort: 'medium', maxTokens: 8000 });
+  return { analysis, resume: tailored, letter, review, builtAt: new Date().toISOString() };
 }

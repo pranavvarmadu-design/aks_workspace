@@ -39,6 +39,9 @@ export const AGENTS = {
       keywords: arr(str),
       responsibilities: arr(str),
       applicationNotes: str,
+      contact: obj({ name: str, title: str }),
+      labResearch: obj({ focus: str, themes: arr(str), methods: arr(str) }),
+      fitToLab: arr(obj({ labNeed: str, herEvidence: str })),
       screen: obj({
         sponsorship: { type: 'string', enum: ['offered', 'not_offered', 'not_stated', 'not_applicable'] },
         requiredSheLacks: arr(str),
@@ -48,8 +51,12 @@ export const AGENTS = {
         reason: str,
       }),
     }),
-    user: (job, candidate = '') =>
-      `Job listing:\n<job>\nTitle: ${job.title}\nEmployer: ${job.company}\nLocation: ${job.location}\nCategory: ${job.category || 'unknown'}\n\n${job.description || '(no description captured; work from the title and employer)'}\n</job>\n\ndocumentStyle is academic_cv for university and research-institute roles, industry_resume otherwise. keywords are the exact terms an applicant tracking system or a search committee would look for. applicationNotes lists anything the listing asks applicants to submit or address (research statement, referees, visa status and so on), or an empty string.${candidateBlock(candidate)}
+    user: (job, candidate = '', labText = '') =>
+      `Job listing:\n<job>\nTitle: ${job.title}\nEmployer: ${job.company}\nLocation: ${job.location}\nCategory: ${job.category || 'unknown'}\n\n${job.description || '(no description captured; work from the title and employer)'}\n</job>${labText?.trim() ? `\n\nAbout the lab or PI (their research page, summary or recent abstracts, as she pasted it):\n<lab>\n${labText}\n</lab>` : ''}\n\ndocumentStyle is academic_cv for university and research-institute roles, industry_resume otherwise. keywords are the exact terms an applicant tracking system or a search committee would look for. applicationNotes lists anything the listing asks applicants to submit or address (research statement, referees, visa status and so on), or an empty string.${candidateBlock(candidate)}
+
+contact: the hiring PI or contact person named in the posting (or in the lab text) and their title; empty strings if none is named.
+labResearch: what the lab or group actually researches, from the posting and the lab text only: focus (one sentence), themes (the research questions or systems), methods (the techniques the lab relies on).
+fitToLab: each place where the lab's needs meet her real background. labNeed is what the lab needs or works on; herEvidence is the specific experience from her resume or candidate notes that answers it. Use only what her resume and notes actually say. Leave out needs she cannot answer; they belong in requiredSheLacks.
 
 screen is a fast, honest go/no-go for her:
 - sponsorship: for a US post, whether the listing offers visa sponsorship, rules it out (for example "must be authorized to work in the US without sponsorship"), or does not say. not_applicable outside the US. She has no work authorisation anywhere.
@@ -73,7 +80,7 @@ Rules that cannot be broken:
 - Never describe an instrument she prepares samples for as one she operates. Write "prepared samples for and interpreted", not "performed" or "ran", unless her notes say she operates it herself.
 - Never claim a technique her notes list as one she does not have, even in passing.
 
-What tailoring means here: lead with the experience that matters most for this job, use the listing's own vocabulary where the resume describes the same thing in other words, cut or shorten what is irrelevant, and write a summary aimed at this role. For academic_cv keep publications, grants, teaching and awards complete and in standard CV order, with no length limit. For industry_resume aim for two pages, lead with outcomes, and put skills near the top.`,
+What tailoring means here: aim the document at this PI's research. Lead with the experience listed in fitToLab, use the lab's own terms for its themes and methods where her work genuinely matches them, write the summary for this lab's research questions, then use the listing's own vocabulary where the resume describes the same thing in other words, cut or shorten what is irrelevant, and write a summary aimed at this role. For academic_cv keep publications, grants, teaching and awards complete and in standard CV order, with no length limit. For industry_resume aim for two pages, lead with outcomes, and put skills near the top.`,
     schema: obj({
       name: str,
       headline: str,
@@ -83,13 +90,37 @@ What tailoring means here: lead with the experience that matters most for this j
         title: str,
         entries: arr(obj({ heading: str, subheading: str, dates: str, bullets: arr(str) })),
       })),
-      coverLetter: str,
     }),
     user: (resume, job, analysis, opts) =>
-      `Master resume:\n<resume>\n${resume}\n</resume>${candidateBlock(opts.candidate)}\n\nJob: ${job.title} at ${job.company} (${job.location})\n\nAnalysis of the listing:\n<analysis>\n${JSON.stringify(analysis, null, 2)}\n</analysis>\n${opts.notes ? `\nHer instructions for this application:\n${opts.notes}\n` : ''}\nProduce the tailored document in ${analysis.documentStyle} style. For list-like sections (skills, publications) use entries with an empty heading and the items as bullets. ${opts.coverLetter ? 'Also write coverLetter: a letter of at most 350 words addressed to the employer, using only facts from the resume, in plain paragraphs.' : 'Set coverLetter to an empty string.'}`,
+      `Master resume:\n<resume>\n${resume}\n</resume>${candidateBlock(opts.candidate)}\n\nJob: ${job.title} at ${job.company} (${job.location})\n\nAnalysis of the listing:\n<analysis>\n${JSON.stringify(analysis, null, 2)}\n</analysis>\n${opts.notes ? `\nHer instructions for this application:\n${opts.notes}\n` : ''}\nProduce the tailored document in ${analysis.documentStyle} style. For list-like sections (skills, publications) use entries with an empty heading and the items as bullets.`,
   },
 
-  // 4. Reviewer: independent check for invented claims and coverage gaps.
+  // 4. Letter: cover letter to the PI and the short email that carries the package.
+  letter: {
+    system:
+      `You write a cover letter and the short email that sends it, for one application. The master resume and her skills notes are the only source of facts about her.
+
+Rules that cannot be broken:
+- Never add an employer, degree, date, publication, skill, technique, metric or achievement that is not in the master resume or her notes.
+- Never describe an instrument she prepares samples for as one she operates.
+- Say something specific about the lab's research only if it is in the posting or the lab text; never invent a paper, project or result of theirs.
+
+The letter is addressed to the named PI or contact if there is one (for example "Dear Professor Smith"), otherwise "Dear Hiring Committee". It runs 300 to 400 words in four or five paragraphs: the post and who she is in one or two sentences; why this lab, tied to its actual research themes; her matching experience, following fitToLab and naming concrete work; anything the role needs where she should be candid (for example the facility-operated instruments, using the wording in her notes), framed constructively; availability and thanks. If her notes say she needs visa sponsorship and the post is outside her country, include one plain sentence that she would need it, unless her instructions say otherwise. Plain, warm, specific prose; no clichés.
+
+The email is the message she will send with the resume and letter attached: a subject line, and a body of three to five sentences that names the post, says what is attached and gives one line on her fit. Sign both with her name only; she adds her own contact details.`,
+    schema: obj({
+      emailSubject: str,
+      emailBody: str,
+      salutation: str,
+      paragraphs: arr(str),
+      closing: str,
+      signature: str,
+    }),
+    user: (resume, job, analysis, tailored, candidate = '', notes = '') =>
+      `Master resume:\n<resume>\n${resume}\n</resume>${candidateBlock(candidate)}\n\nJob: ${job.title} at ${job.company} (${job.location})\n<job>\n${(job.description || '').slice(0, 12000)}\n</job>\n\nAnalysis of the post, the lab and her fit:\n<analysis>\n${JSON.stringify(analysis, null, 2)}\n</analysis>\n\nThe tailored resume going with this letter:\n<tailored>\n${JSON.stringify(tailored)}\n</tailored>\n${notes ? `\nHer instructions for this application:\n${notes}\n` : ''}`,
+  },
+
+  // 5. Reviewer: independent check for invented claims and coverage gaps.
   reviewer: {
     system:
       'You audit a tailored resume against the master resume it was built from. Your job is to catch any claim in the tailored version that the master resume does not support, and to report how well the tailored version covers the job requirements. Be strict: a skill, number or responsibility that only appears in the tailored version is unsupported. So is any wording that says she operated an instrument or performed a technique where her candidate notes say she only prepared samples for it or does not have it.',
@@ -100,7 +131,7 @@ What tailoring means here: lead with the experience that matters most for this j
       gaps: arr(str),
       suggestions: arr(str),
     }),
-    user: (resume, tailored, analysis, candidate = '') =>
-      `Master resume:\n<resume>\n${resume}\n</resume>${candidateBlock(candidate)}\n\nTailored version:\n<tailored>\n${JSON.stringify(tailored, null, 2)}\n</tailored>\n\nJob requirements:\n<analysis>\n${JSON.stringify(analysis, null, 2)}\n</analysis>\n\nmatchScore is 0-100 for how well her real background fits the must-have requirements. gaps are requirements she does not meet on paper. suggestions are things she could truthfully add if they apply to her (phrase each as a question to her).`,
+    user: (resume, tailored, analysis, candidate = '', letter = null) =>
+      `Master resume:\n<resume>\n${resume}\n</resume>${candidateBlock(candidate)}\n\nTailored version:\n<tailored>\n${JSON.stringify(tailored, null, 2)}\n</tailored>${letter ? `\n\nCover letter and email going with it (audit these claims too):\n<letter>\n${JSON.stringify(letter, null, 2)}\n</letter>` : ''}\n\nJob requirements:\n<analysis>\n${JSON.stringify(analysis, null, 2)}\n</analysis>\n\nmatchScore is 0-100 for how well her real background fits the must-have requirements. gaps are requirements she does not meet on paper. suggestions are things she could truthfully add if they apply to her (phrase each as a question to her).`,
   },
 };

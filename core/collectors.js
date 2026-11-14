@@ -4,7 +4,7 @@
 // Only licensed APIs and feeds/endpoints the publishers expose for reuse are
 // used here. LinkedIn and Indeed are never fetched automatically.
 
-import { MARKETS, UNIVERSITY_RE } from './config.js';
+import { MARKETS, UNIVERSITY_RE, marketOf } from './config.js';
 
 export const stripHtml = (s = '') =>
   String(s)
@@ -110,6 +110,14 @@ export async function rssCollect(fetchFn, feed) {
     const d = stripHtml(it.description);
     const m = d.length < 160 && d.match(/^(.*?)\s*\(([^()]+)\)\s*$/);
     // Employer career feeds (SAP SuccessFactors) put the place in the title: "Analyst (Vikhroli, Maharashtra, India)".
+    if (feed.format === 'madgex') {
+      // "Employer: Job title"; description lines: salary, employer, summary, location (last).
+      const [employer, ...rest] = it.title.split(/:\s+/);
+      const lines = d.split('\n').map((x) => x.trim()).filter(Boolean);
+      const location = lines.at(-1) || '';
+      const summary = lines.filter((x, i) => i !== lines.length - 1 && !x.endsWith(':') && x.replace(/:$/, '') !== employer).join(' ');
+      return { title: rest.join(': ') || it.title, company: employer, location, url: it.link.replace(/&amp;/g, '&').replace(/\?TrackID.*$/, ''), postedAt: it.pubDate, description: summary, market: marketOf(location) || feed.market };
+    }
     const t = feed.employer && it.title.match(/^(.*\S)\s*\(([^()]+)\)\s*$/);
     if (t) return { title: t[1], url: it.link.replace(/&amp;/g, '&').replace(/[?&]feedId=.*$/, ''), postedAt: it.pubDate, company: feed.employer, location: t[2], description: d };
     return {

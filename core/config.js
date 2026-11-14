@@ -55,7 +55,7 @@ export const DEFAULT_PROFILE = {
     'production', 'manufacturing', 'operator', 'technician', 'shift', 'driver', 'admin', 'secretary', 'crm', 'category manager',
   ],
   // Methods she does not have: skipped even when the title is in her field.
-  alwaysExcludeTerms: ['model', 'remote sensing', 'forecasting', 'ai/ml', 'machine learning', 'data science', 'bioinformatic', 'computational'],
+  alwaysExcludeTerms: ['model', 'remote sensing', 'forecasting', 'ai/ml', 'machine learning', 'data science', 'bioinformatic', 'computational', 'generative'],
   // Words in a title that mark her field; they lift a listing up the ranking.
   relevanceTerms: [
     'plant', 'botan', 'crop', 'floral', 'flower', 'pollinat', 'nectar', 'horticult', 'agronom', 'seed', 'herbar',
@@ -78,6 +78,8 @@ export const DEFAULT_SOURCES = {
     { name: 'HigherEdJobs: Food Science', url: 'https://www.higheredjobs.com/rss/categoryFeed.cfm?catID=53', market: 'US', university: true },
     { name: 'HigherEdJobs: Laboratory and Research', url: 'https://www.higheredjobs.com/rss/categoryFeed.cfm?catID=150', market: 'US', university: true },
   ],
+  // Science Careers (journal Science): international, keyword RSS. Market comes from each posting's location.
+  scienceCareers: ['postdoctoral plant', 'postdoc botany', 'pollination', 'plant biology postdoctoral'],
   // University career sites that run on Workday expose a JSON search endpoint.
   workday: [
     { name: 'NUS', host: 'nus.wd3.myworkdayjobs.com', tenant: 'nus', site: 'NUS', market: 'SG', university: true },
@@ -127,6 +129,22 @@ export const INDEED_COUNTRIES = [
   { code: 'AU', name: 'Australia', market: 'OTHER', style: 'fellow' },
   { code: 'NZ', name: 'New Zealand', market: 'OTHER', style: 'fellow' },
 ];
+
+const US_STATES = 'alabama|alaska|arizona|arkansas|california|colorado|connecticut|delaware|florida|georgia|hawaii|idaho|illinois|indiana|iowa|kansas|kentucky|louisiana|maine|maryland|massachusetts|michigan|minnesota|mississippi|missouri|montana|nebraska|nevada|new hampshire|new jersey|new mexico|new york|north carolina|north dakota|ohio|oklahoma|oregon|pennsylvania|rhode island|south carolina|south dakota|tennessee|texas|utah|vermont|virginia|washington|west virginia|wisconsin|wyoming|district of columbia';
+const EMEA_CODES = new Set('GB UK IE DE NL CH AT BE LU FR ES PT IT SE DK NO FI IS PL CZ SK HU SI HR RO BG GR CY MT EE LV LT IL TR AE SA QA KW BH OM JO LB EG MA TN ZA KE NG GH ET'.split(' '));
+const EMEA_WORDS = /\b(united kingdom|england|scotland|wales|northern ireland|ireland|germany|deutschland|netherlands|switzerland|austria|belgium|france|spain|portugal|italy|sweden|denmark|norway|finland|poland|czech|hungary|greece|israel|morocco|south africa|kenya|egypt|uae|saudi|qatar|oxford|cambridge|london|edinburgh|\w+shire)\b/i;
+
+// Which market a free-text job location belongs to: 'US' | 'SG' | 'IN' | 'EMEA' | 'OTHER' | null (unknown).
+export function marketOf(location = '') {
+  const code = (location.match(/\(([A-Z]{2})\)\s*$/) || [])[1];
+  if (code) return code === 'US' ? 'US' : code === 'SG' ? 'SG' : code === 'IN' ? 'IN' : EMEA_CODES.has(code) ? 'EMEA' : 'OTHER';
+  if (new RegExp(`\\b(${US_STATES}|usa|united states)\\b|,\\s*[A-Z]{2}$`, 'i').test(location) && !/,\s*(UK)$/.test(location)) return 'US';
+  if (/singapore/i.test(location)) return 'SG';
+  if (/\bindia\b/i.test(location)) return 'IN';
+  if (EMEA_WORDS.test(location)) return 'EMEA';
+  if (/\b(canada|ontario|quebec|british columbia|alberta|australia|new zealand|japan|china|korea|hong kong|taiwan|brazil|mexico|chile|argentina)\b/i.test(location)) return 'OTHER';
+  return null;
+}
 
 export const CATEGORY_LABELS = {
   university: 'Universities',
