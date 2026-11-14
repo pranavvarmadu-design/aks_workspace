@@ -18,7 +18,7 @@ export const AGENTS = {
       seniority: str,
     }),
     user: (resume) =>
-      `Resume:\n<resume>\n${resume}\n</resume>\n\nReturn: fieldKeywords (4 research/field phrases, most specific first), academicRoles (4-6 role titles matching her seniority), sectorQueries (up to 3 job-search phrases per India sector that fit her background; leave a sector empty if nothing fits), skills (up to 15 techniques, tools and domains for relevance scoring), seniority (one line).`,
+      `Resume:\n<resume>\n${resume}\n</resume>\n\nReturn: fieldKeywords (4 research/field phrases, most specific first), academicRoles (4-6 postdoctoral role titles, e.g. postdoctoral fellow, postdoctoral research associate), sectorQueries (up to 3 job-search phrases per India sector that fit her background; leave a sector empty if nothing fits), skills (up to 15 techniques, tools and domains for relevance scoring), seniority (one line).`,
   },
 
   // 2. Job analyst: what does this listing actually ask for?

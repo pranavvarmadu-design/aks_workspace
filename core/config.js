@@ -27,7 +27,7 @@ export const DEFAULT_PROFILE = {
   // (Settings -> "Extract keywords from resume").
   fieldKeywords: ['plant biotechnology', 'molecular biology', 'agriculture', 'biochemistry'],
   // Any-of role terms used for university searches.
-  academicRoles: ['postdoctoral', 'research fellow', 'lecturer', 'assistant professor', 'research scientist', 'research associate'],
+  academicRoles: ['postdoctoral', 'postdoc', 'postdoctoral fellow', 'postdoctoral research associate', 'postdoctoral scholar'],
   // Up to three search phrases per India sector.
   sectorQueries: {
     agritech: ['agritech', 'agronomist', 'crop science'],
