@@ -184,3 +184,28 @@ export const PLANT_SCIENCE_150 = [
   U('University of Cape Town', 'South Africa', 'EMEA', 'uct.ac.za'),
   U('University of São Paulo', 'Brazil', 'OTHER', 'usp.br'),
 ];
+
+// ---- The 70 universities the sweep checks ----
+// The QS top 30 without its Chinese universities (27), then 43 curated universities chosen for her
+// field and her target regions (US, UK and Europe, Singapore). Institutes and botanic gardens above
+// stay in PLANT_SCIENCE_150 but are not swept.
+const EXCLUDED_COUNTRIES = new Set(['China']);
+const CURATED_PRIORITY = [
+  // United States
+  'wsu.edu', 'ucr.edu', 'psu.edu', 'rutgers.edu', 'uga.edu', 'harvard.edu', 'duke.edu', 'stanford.edu',
+  'yale.edu', 'wustl.edu', 'arizona.edu', 'colostate.edu', 'missouri.edu', 'unl.edu',
+  // United Kingdom and Ireland
+  'ox.ac.uk', 'cam.ac.uk', 'ed.ac.uk', 'nottingham.ac.uk', 'leeds.ac.uk', 'sheffield.ac.uk', 'warwick.ac.uk',
+  'imperial.ac.uk', 'tcd.ie',
+  // Europe
+  'lmu.de', 'tum.de', 'uni-bonn.de', 'uni-heidelberg.de', 'uni-tuebingen.de', 'uu.nl', 'uva.nl',
+  'universiteitleiden.nl', 'kuleuven.be', 'uzh.ch', 'unibe.ch', 'su.se', 'umu.se', 'uu.se', 'lu.se',
+  'au.dk', 'univie.ac.at', 'boku.ac.at',
+  // Singapore
+  'nus.edu.sg', 'ntu.edu.sg',
+];
+const byDomain = new Map(PLANT_SCIENCE_150.map((u) => [u.domain, u]));
+export const TOP_70 = [
+  ...PLANT_SCIENCE_150.filter((u) => u.rank && !EXCLUDED_COUNTRIES.has(u.country)),
+  ...CURATED_PRIORITY.map((d) => byDomain.get(d)),
+];
