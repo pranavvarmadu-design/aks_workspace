@@ -14,7 +14,7 @@ export const DEFAULT_BLOCKERS = [
 export const DEFAULT_STRENGTHS = [
   'anatomy', 'histolog', 'ultrastructure', 'microscopy', 'imaging', 'morpholog', 'developmental biology',
   'floral', 'flower', 'pollinat', 'nectar', 'reproductive biology', 'herbarium', 'collections', 'phenology',
-  'field work', 'fieldwork', 'field experiment', 'sample preparation', 'extraction', 'teaching', 'plant structure',
+  'field work', 'fieldwork', 'field experiment', 'field trial', 'agronomy', 'plant physiology', 'sample preparation', 'extraction', 'teaching', 'plant structure',
 ];
 
 const NO_SPONSOR = [
@@ -43,7 +43,7 @@ export const isIndia = (job) => job.market === 'IN' || job.category === 'industr
 // Smallest "N years" figure stated next to "experience", e.g. "3-5 years of experience" -> 3.
 export function yearsRequired(text = '') {
   const found = [];
-  const re = /(\d{1,2})\s*(?:\+|plus)?\s*(?:(?:-|to|–)\s*\d{1,2})?\s*(?:years?|yrs?)(?:'s)?\s*(?:of\s+)?(?:\w+\s+){0,4}?experience|experience\s*(?:of|:)?\s*(\d{1,2})\s*(?:\+|plus)?\s*(?:(?:-|to|–)\s*\d{1,2})?\s*(?:years?|yrs?)/gi;
+  const re = /(\d{1,2})\s*(?:\+|plus)?\s*(?:(?:-|to|–)\s*\d{1,2})?\s*(?:years?|yrs?)(?:'s)?\s*(?:of\s+)?(?:\w+\s+){0,4}?experience|experience[^.\d]{0,40}?(\d{1,2})\s*(?:\+|plus)?\s*(?:(?:-|to|–)\s*\d{1,2})?\s*\)?\s*(?:years?|yrs?)/gi;
   for (const m of text.matchAll(re)) found.push(Number(m[1] || m[2]));
   return found.length ? Math.min(...found) : null;
 }
@@ -52,7 +52,7 @@ export function indiaChecks(job) {
   const text = `${job.title || ''}\n${job.description || ''}`;
   return {
     years: yearsRequired(text),
-    industryExperience: /\b(industry|industrial|corporate|gmp|glp|plant|manufacturing|pharmaceutical industry)\s+experience\b|experience\s+in\s+(?:a\s+|the\s+)?(?:pharmaceutical|agro|seed|biotech|fmcg)\s+(?:industry|company)/i.test(text),
+    industryExperience: /\b(industry|industrial|corporate|gmp|glp|manufacturing)\s+(?:\w+\s+){0,2}experience\b|experience\s+in\s+(?:a\s+|the\s+)?(?:pharmaceutical|agro|seed|biotech|fmcg)\s+(?:industry|company)/i.test(text),
     degrees: [...new Set([...text.matchAll(DEGREE_RE)].map((m) => m[0].replace(/\s+/g, '').toUpperCase().replace(/\.$/, '')))],
     sales: SALES_RE.test(job.title || ''),
     phd: /\bph\.?\s?d\b|doctorate/i.test(text),

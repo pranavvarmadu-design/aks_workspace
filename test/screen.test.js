@@ -38,3 +38,14 @@ test('India industry checks: experience, degrees, sales roles, location', async 
   assert.equal(s.sponsorship, null, 'sponsorship is not judged for India posts');
   assert.ok(s.india);
 });
+
+test('India checks on wording from a real posting', async () => {
+  const { indiaChecks } = await import('../core/screen.js');
+  const c = indiaChecks({ title: 'Research Scientist Biology - Micro-plot Field Trials', location: 'Udaipur, India',
+    description: 'Contribute to the delivery of development products on mid-term (>3 years). Education: PhD or MSc in Agriculture. Work Experience: Post academic industrial research experience (2-5 years) appreciated.' });
+  assert.equal(c.years, 2);
+  assert.equal(c.industryExperience, true);
+  assert.equal(c.phd, true);
+  assert.equal(indiaChecks({ title: 'x', description: 'Experience in plant anatomy and microscopy.' }).industryExperience, false, '"plant" is botany, not a manufacturing plant');
+  assert.ok(screenJob({ market: 'IN', title: 'Field trials scientist', description: 'Conducting high quality field trials' }).strengths.includes('field trial'));
+});

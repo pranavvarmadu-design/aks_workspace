@@ -77,8 +77,11 @@ function extractJobFromPage() {
   };
   const ld = [...document.querySelectorAll('script[type="application/ld+json"]')]
     .flatMap((s) => {
+      const parse = (t) => {
+        try { return JSON.parse(t); } catch { return JSON.parse(t.replace(/,(\s*[}\]])/g, '$1')); }
+      };
       try {
-        const d = JSON.parse(s.textContent);
+        const d = parse(s.textContent);
         return Array.isArray(d) ? d : d['@graph'] || [d];
       } catch { return []; }
     })

@@ -95,7 +95,7 @@ function jobCard(j) {
     st === 'applied' ? '<span class="tag state">Applied</span>' : '',
     j.category === 'university' ? `<span class="tag">${esc(MARKETS[j.market]?.label || j.market || '')}</span>` : '',
     j.category === 'industry' ? `<span class="tag">${esc(SECTORS[j.sector]?.label || '')}</span>` : '',
-    j.score != null ? `<span class="tag ${j.score >= 60 ? 'good' : ''}">Match ${j.score}</span>` : '',
+    j.score ? `<span class="tag ${j.score >= 60 ? 'good' : ''}">Match ${j.score}</span>` : '',
     ...screenTags(j),
     state.tailored[j.id] ? '<span class="tag good">Resume ready</span>' : '',
     `<span class="tag">${esc(j.source)}</span>`,
