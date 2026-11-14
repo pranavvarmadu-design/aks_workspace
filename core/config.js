@@ -34,7 +34,26 @@ export const DEFAULT_PROFILE = {
     biotech: ['plant tissue culture', 'research scientist botany', 'plant biotechnology'],
     pharma: ['phytochemistry', 'herbal research scientist', 'analytical research scientist'],
   },
-  excludeTerms: [],
+  // Titles in fields far from plant biology. Matched at word starts, so 'neuro' also covers neuroscience.
+  excludeTerms: [
+    'marine', 'ocean', 'coastal', 'fisheries', 'neuro', 'brain', 'oncology', 'cancer', 'tumor', 'hematology',
+    'pediatric', 'cardio', 'cardiac', 'vascular', 'immunolog', 'immune', 't cell', 'viral', 'virus', 'medicine',
+    'medical', 'clinical', 'surgery', 'radiology', 'psych', 'pharmacy practice', 'diabetes', 't1d', 'cornea',
+    'mathematical', 'computational', 'engineering', 'bioelectronic', 'ultrasound', 'quantum', 'artificial intelligence',
+    'machine learning', 'drug delivery', 'tissue engineering', 'regeneration', 'enzyme kinetics', 'biophysics',
+    'chemical biology', 'physics', 'mouse', 'zebrafish', 'mammal', 'veterinary', 'animal science',
+    'pharmacolog', 'pharmaceutic', 'medicinal chemistry', 'drug', 'cell biology', 'assay',
+    'economic', 'aerosol', 'emission', 'methane',
+    'deer', 'wildlife', 'geography',
+  ],
+  // Methods she does not have: skipped even when the title is in her field.
+  alwaysExcludeTerms: ['model', 'remote sensing', 'forecasting', 'ai/ml', 'machine learning', 'data science', 'bioinformatic', 'computational'],
+  // Words in a title that mark her field; they lift a listing up the ranking.
+  relevanceTerms: [
+    'plant', 'botan', 'crop', 'floral', 'flower', 'pollinat', 'nectar', 'horticult', 'agronom', 'seed', 'herbar',
+    'phenolog', 'ecolog', 'evolution', 'systematic', 'phenomic', 'viticult', 'mycolog', 'soil', 'agricult', 'food',
+    'horticult', 'forest', 'entomolog', 'insect', 'bee',
+  ],
   // Keep only university listings whose title matches academicRoles (postdoc by default).
   universityRolesOnly: true,
 };
@@ -45,11 +64,10 @@ export const DEFAULT_SOURCES = {
   rss: [
     { name: 'HigherEdJobs: Plant and Soil Science', url: 'https://www.higheredjobs.com/rss/categoryFeed.cfm?catID=49', market: 'US', university: true },
     { name: 'HigherEdJobs: Biology', url: 'https://www.higheredjobs.com/rss/categoryFeed.cfm?catID=100', market: 'US', university: true },
-    { name: 'HigherEdJobs: Biochemistry and Molecular Biology', url: 'https://www.higheredjobs.com/rss/categoryFeed.cfm?catID=99', market: 'US', university: true },
-    { name: 'HigherEdJobs: Pharmacy and Pharmacology', url: 'https://www.higheredjobs.com/rss/categoryFeed.cfm?catID=154', market: 'US', university: true },
+    { name: 'HigherEdJobs: Horticulture', url: 'https://www.higheredjobs.com/rss/categoryFeed.cfm?catID=123', market: 'US', university: true },
+    { name: 'HigherEdJobs: Ecology, Environmental Science and Forestry', url: 'https://www.higheredjobs.com/rss/categoryFeed.cfm?catID=54', market: 'US', university: true },
+    { name: 'HigherEdJobs: Entomology', url: 'https://www.higheredjobs.com/rss/categoryFeed.cfm?catID=52', market: 'US', university: true },
     { name: 'HigherEdJobs: Food Science', url: 'https://www.higheredjobs.com/rss/categoryFeed.cfm?catID=53', market: 'US', university: true },
-    { name: 'HigherEdJobs: Medical Research', url: 'https://www.higheredjobs.com/rss/categoryFeed.cfm?catID=137', market: 'US', university: true },
-    { name: 'HigherEdJobs: Biological and Biomedical Engineering', url: 'https://www.higheredjobs.com/rss/categoryFeed.cfm?catID=113', market: 'US', university: true },
     { name: 'HigherEdJobs: Laboratory and Research', url: 'https://www.higheredjobs.com/rss/categoryFeed.cfm?catID=150', market: 'US', university: true },
   ],
   // University career sites that run on Workday expose a JSON search endpoint.

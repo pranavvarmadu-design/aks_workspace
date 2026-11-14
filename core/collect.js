@@ -20,12 +20,20 @@ export function detectSector(text) {
 }
 
 // 0-100: how many of the profile's keywords appear in the listing.
+// True when term appears at the start of a word in text ('neuro' matches 'neuroscience', not 'aneurysm').
+export const startsWord = (text, term) =>
+  new RegExp(`(^|[^a-z0-9])${term.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`).test(String(text).toLowerCase());
+
 export function scoreJob(j, profile) {
   const text = words(`${j.title} ${j.description}`);
   const title = words(j.title);
   const kws = [...new Set([...(profile.fieldKeywords || []), ...(profile.skills || [])].map(words))].filter(Boolean);
-  if (!kws.length) return 0;
-  let pts = 0;
+  // Field words in the title count even when the full description is not available.
+  const terms = profile.relevanceTerms || [];
+  // A title in her field counts most; a generic title from a feed in her field still counts a little.
+  const field = terms.filter((t) => startsWord(title, t)).length + 0.5 * Math.min(1, terms.filter((t) => startsWord(j.feed || '', t)).length);
+  if (!kws.length) return Math.min(100, field * 25);
+  let pts = field * 1.5;
   for (const k of kws) {
     if (title.includes(k)) pts += 2;
     else if (text.includes(k)) pts += 1;
@@ -107,7 +115,10 @@ export function finalise(raw, profile) {
   for (const r of raw) {
     const j = classify(r);
     if (!j || !j.title || !j.url) continue;
-    if (exclude.some((x) => words(j.title).includes(x))) continue;
+    // A title that names her field is never dropped ('Biosystems Engineering & Soil Science' stays).
+    const inField = (profile.relevanceTerms || []).some((t) => startsWord(j.title, t));
+    if (!inField && exclude.some((x) => startsWord(j.title, x))) continue;
+    if ((profile.alwaysExcludeTerms || []).some((x) => startsWord(j.title, x))) continue;
     // University listings must name one of her target roles (postdoc by default).
     if (j.category === 'university' && profile.universityRolesOnly !== false && !isTargetRole(j.title, profile)) continue;
     const key = words(`${j.title}|${j.company}`).replace(/\s+/g, ' ');

@@ -134,3 +134,17 @@ test('university listings are limited to postdoc roles', () => {
   assert.deepEqual(titles, ['Agronomist', 'Fellow (Post Doc)', 'Postdoctoral Research Associate - Plant Breeding']);
   assert.equal(finalise(raw, { ...DEFAULT_PROFILE, universityRolesOnly: false }).length, 4);
 });
+
+test('off-field titles are skipped and plant titles rank first', () => {
+  const mk = (title) => ({ title, company: 'Some University', url: 'https://x/' + title, market: 'US', university: true, description: '' });
+  const out = finalise([
+    mk('Doherty Marine Biology Postdoctoral Scholar in Biology'),
+    mk('Post-Doctoral Fellow, School of Medicine, Neurosurgery'),
+    mk('Postdoctoral Associate'),
+    mk('Postdoctoral Research Associate - Plant Breeding, Genomics, And Phenomics'),
+    mk('Postdoctoral Fellow in AI for Medical Ultrasound Image Analysis'),
+    mk('Post-Doctoral Research Associate, Department of Biosystems Engineering & Soil Science'),
+    mk('Postdoctoral Position in Remote Sensing for Animal and Ecosystem Ecology'),
+  ], DEFAULT_PROFILE).map((j) => j.title);
+  assert.deepEqual(out, ['Postdoctoral Research Associate - Plant Breeding, Genomics, And Phenomics', 'Post-Doctoral Research Associate, Department of Biosystems Engineering & Soil Science', 'Postdoctoral Associate']);
+});
