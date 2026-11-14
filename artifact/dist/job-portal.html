@@ -1,0 +1,245 @@
+<title>Job Finder and Resume Builder</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap">
+<style>
+/* Layout: one working column, max 880px; sticky tab bar; listings as a dense card list. */
+:root {
+  --bg: #f2f5f4; --surface: #ffffff; --ink: #17211e; --muted: #5a6964; --line: #d5ddda;
+  --accent: #14694f; --accent-ink: #ffffff; --accent-soft: #dff0e9; --warn: #9a3b1a; --warn-soft: #fbe9e1;
+  --body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --display: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121715; --surface: #1b2220; --ink: #e6ece9; --muted: #98a6a1; --line: #2f3936;
+  --accent: #5dc9a2; --accent-ink: #0b1a14; --accent-soft: #1b3a2f; --warn: #f0a184; --warn-soft: #3d231a; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #121715; --surface: #1b2220; --ink: #e6ece9; --muted: #98a6a1; --line: #2f3936;
+  --accent: #5dc9a2; --accent-ink: #0b1a14; --accent-soft: #1b3a2f; --warn: #f0a184; --warn-soft: #3d231a; color-scheme: dark }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--body); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.wrap { max-width: 880px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+header .wrap { display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap; }
+h1 { font: 600 17px var(--display); margin: 12px 0 0; }
+main.wrap { padding-block: 16px 48px; }
+h2 { font: 600 12px var(--body); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 22px 0 8px; }
+.small { font-size: 13px; } .muted { color: var(--muted); } .error { color: var(--warn); }
+p { margin: 6px 0; max-width: 68ch; }
+.tabs { display: flex; gap: 4px; }
+.tabs button { border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; padding: 12px 10px 10px; color: var(--muted); font-weight: 600; }
+.tabs button[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+button { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 7px 12px; cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button:disabled { opacity: .5; cursor: default; }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+input, textarea { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; width: 100%; }
+textarea { resize: vertical; }
+label { display: block; margin: 10px 0; font-size: 13px; color: var(--muted); }
+label > input, label > textarea { margin-top: 4px; font-size: 15px; }
+label.check { display: flex; align-items: center; gap: 8px; color: var(--ink); font-size: 15px; }
+label.check input { width: auto; }
+.segmented { display: flex; margin: 12px 0 10px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.segmented button { flex: 1; min-width: 0; border: 0; border-radius: 0; background: var(--surface); padding: 9px 4px; font-weight: 600; color: var(--muted); }
+.segmented button + button { border-left: 1px solid var(--line); }
+.segmented button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); }
+.count { font-weight: 400; font-size: 13px; font-variant-numeric: tabular-nums; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.chips button { border-radius: 999px; padding: 3px 12px; font-size: 13px; }
+.chips button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin: 8px 0; }
+.job { display: grid; gap: 6px; }
+.job h3 { margin: 0; font: 600 15px/1.3 var(--body); overflow-wrap: anywhere; }
+.job h3 a { color: var(--ink); text-decoration: none; } .job h3 a:hover { text-decoration: underline; }
+.job .meta { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+.tags, .actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag { font-size: 12px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.tag.good { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+.tag.state { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+.actions button { font-size: 13px; padding: 4px 10px; }
+.empty { text-align: center; color: var(--muted); padding: 32px 12px; }
+.steps { padding-left: 20px; color: var(--muted); } .steps li.active { color: var(--ink); font-weight: 600; } .steps li.done { color: var(--accent); }
+#review h3 { margin: 0 0 6px; font: 600 16px var(--display); } #review ul { margin: 4px 0 10px 18px; padding: 0; }
+#review .warn { background: var(--warn-soft); color: var(--warn); border-radius: 6px; padding: 10px; margin-bottom: 10px; }
+.preview { background: #fff; color: #111; border: 1px solid var(--line); border-radius: 8px; padding: 24px; margin: 10px 0; font: 13px/1.4 Georgia, 'Times New Roman', serif; overflow-wrap: anywhere; }
+.preview h1 { font: bold 20px Georgia, serif; margin: 0; color: #111; }
+.preview h2 { color: #111; font: bold 12px Georgia, serif; border-bottom: 1px solid #999; margin: 14px 0 5px; letter-spacing: .06em; }
+.preview .contact, .preview .headline { color: #444; font-size: 12px; }
+.preview .row { display: flex; justify-content: space-between; gap: 10px; } .preview .heading { font-weight: bold; }
+.preview ul { margin: 2px 0 7px 18px; padding: 0; }
+</style>
+
+<header><div class="wrap">
+  <h1>Job Finder</h1>
+  <nav class="tabs" role="tablist">
+    <button role="tab" id="tabbtn-jobs" data-tab="jobs" aria-selected="true">Jobs</button>
+    <button role="tab" id="tabbtn-builder" data-tab="builder" aria-selected="false">Resume builder</button>
+    <button role="tab" id="tabbtn-resume" data-tab="resume" aria-selected="false">My resume</button>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <p id="notice" class="card error" hidden></p>
+
+  <section id="tab-jobs">
+    <p id="status" class="muted small">Loading listings...</p>
+    <div class="segmented" id="categories">
+      <button data-cat="university" aria-pressed="true">Universities <span class="count"></span></button>
+      <button data-cat="industry" aria-pressed="false">India industry <span class="count"></span></button>
+      <button data-cat="saved" aria-pressed="false">Saved <span class="count"></span></button>
+    </div>
+    <div class="chips" id="filters"></div>
+    <input id="search" type="search" placeholder="Filter by title, employer or keyword" aria-label="Filter listings">
+    <div id="job-list"></div>
+
+    <h2>Add a job you found elsewhere</h2>
+    <p class="muted small">For LinkedIn, Indeed or any careers page: copy the posting text and paste it here. It is saved to your Saved tab, ready for tailoring.</p>
+    <label>Link to the posting (optional) <input id="add-url" type="url" placeholder="https://"></label>
+    <label>Posting text <textarea id="add-text" rows="5" placeholder="Paste the job title, employer and description"></textarea></label>
+    <button id="add-job">Add to Saved</button>
+    <span id="add-msg" class="small muted"></span>
+  </section>
+
+  <section id="tab-builder" hidden>
+    <div id="target" class="card muted">Pick a listing in the Jobs tab and choose "Tailor resume".</div>
+    <div id="builder-form" hidden>
+      <label>Job description. Paste the full posting text here for the best result.
+        <textarea id="job-desc" rows="6"></textarea>
+      </label>
+      <label class="check"><input type="checkbox" id="cover-letter"> Also write a cover letter</label>
+      <label>Anything to emphasise or leave out for this application (optional)
+        <textarea id="notes" rows="2"></textarea>
+      </label>
+      <button id="build" class="primary">Build tailored resume</button>
+      <ol id="steps" class="steps" hidden>
+        <li data-step="analyst">Reading the listing</li>
+        <li data-step="tailor">Tailoring the resume</li>
+        <li data-step="reviewer">Checking every claim against your master resume</li>
+      </ol>
+      <p id="build-msg" class="error small"></p>
+    </div>
+    <div id="result" hidden>
+      <div id="review" class="card"></div>
+      <div class="toolbar">
+        <button id="dl-docx">Download Word file</button>
+        <button id="dl-html">Download for printing (HTML)</button>
+        <button id="copy-md">Copy as Markdown</button>
+      </div>
+      <div id="preview" class="preview"></div>
+      <div id="letter-wrap" hidden>
+        <h2>Cover letter</h2>
+        <textarea id="letter" rows="12"></textarea>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-resume" hidden>
+    <p class="muted small">Paste the full resume or CV. Every tailored version is built only from what is written here. It is stored privately for your account; other people who open this page cannot see it.</p>
+    <textarea id="resume-text" rows="16" placeholder="Paste resume text here" aria-label="Master resume"></textarea>
+    <div class="toolbar">
+      <button id="save-resume" class="primary">Save resume</button>
+      <button id="extract-profile">Set search keywords from resume</button>
+    </div>
+    <p id="resume-msg" class="small muted"></p>
+    <h2>Search keywords</h2>
+    <p class="muted small">Used to rank listings here, and by Claude when it collects new listings.</p>
+    <div id="profile-view" class="card small muted">Not set yet.</div>
+  </section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>(()=>{var _={US:{label:"United States",adzuna:["us"]},SG:{label:"Singapore",adzuna:["sg"]},EMEA:{label:"EMEA",adzuna:["gb","de","nl","ch","fr"]}},T={agritech:{label:"Agritech",terms:["agritech","agronomy","crop science","seed","precision agriculture","plant breeding","agri"]},biotech:{label:"Biotech",terms:["biotechnology","biotech","molecular biology","genomics","bioprocess","cell culture","fermentation"]},pharma:{label:"Pharma",terms:["pharmaceutical","pharma","drug discovery","formulation","clinical research","regulatory affairs","biologics"]}},D={fieldKeywords:["plant biotechnology","molecular biology","agriculture","biochemistry"],academicRoles:["postdoctoral","research fellow","lecturer","assistant professor","research scientist","research associate"],sectorQueries:{agritech:["agritech","agronomist","crop science"],biotech:["biotechnology","molecular biology scientist","bioprocess"],pharma:["pharmaceutical research","drug discovery","formulation scientist"]},excludeTerms:[]};var L=e=>String(e).toLowerCase();function U(e,t){let a=L(`${e.title} ${e.description}`),s=L(e.title),r=[...new Set([...t.fieldKeywords||[],...t.skills||[]].map(L))].filter(Boolean);if(!r.length)return 0;let c=0;for(let h of r)s.includes(h)?c+=2:a.includes(h)?c+=1:h.includes(" ")&&h.split(" ").every(d=>a.includes(d))&&(c+=.5);return Math.min(100,Math.round(c/Math.min(r.length,6)*50))}var l={type:"string"},g=e=>({type:"array",items:e}),v=e=>({type:"object",properties:e,required:Object.keys(e),additionalProperties:!1}),y={profile:{system:"You read a resume and produce search inputs for a job finder that covers (a) university and research-institute roles in the US, Singapore and EMEA, and (b) industry roles in India in agritech, biotech and pharma. Base everything strictly on the resume. Keywords must be short phrases a recruiter would put in a job title or description.",schema:v({fieldKeywords:g(l),academicRoles:g(l),sectorQueries:v({agritech:g(l),biotech:g(l),pharma:g(l)}),skills:g(l),seniority:l}),user:e=>`Resume:
+<resume>
+${e}
+</resume>
+
+Return: fieldKeywords (4 research/field phrases, most specific first), academicRoles (4-6 role titles matching her seniority), sectorQueries (up to 3 job-search phrases per India sector that fit her background; leave a sector empty if nothing fits), skills (up to 15 techniques, tools and domains for relevance scoring), seniority (one line).`},analyst:{system:"You are a hiring analyst. Extract what a job listing requires so a resume can be tailored to it. Use only what the listing says; do not guess requirements it does not state.",schema:v({roleSummary:l,documentStyle:{type:"string",enum:["academic_cv","industry_resume"]},mustHave:g(l),niceToHave:g(l),keywords:g(l),responsibilities:g(l),applicationNotes:l}),user:e=>`Job listing:
+<job>
+Title: ${e.title}
+Employer: ${e.company}
+Location: ${e.location}
+Category: ${e.category||"unknown"}
+
+${e.description||"(no description captured; work from the title and employer)"}
+</job>
+
+documentStyle is academic_cv for university and research-institute roles, industry_resume otherwise. keywords are the exact terms an applicant tracking system or a search committee would look for. applicationNotes lists anything the listing asks applicants to submit or address (research statement, referees, visa status and so on), or an empty string.`},tailor:{system:`You tailor a resume to one job. The master resume is the only source of facts.
+
+Rules that cannot be broken:
+- Never add an employer, degree, date, publication, skill, tool, metric or achievement that is not in the master resume. Rewording and reordering are allowed; new facts are not.
+- If the job asks for something the resume does not show, leave it out. Do not imply it.
+- Keep every date, title and institution exactly as written.
+
+What tailoring means here: lead with the experience that matters most for this job, use the listing's own vocabulary where the resume describes the same thing in other words, cut or shorten what is irrelevant, and write a summary aimed at this role. For academic_cv keep publications, grants, teaching and awards complete and in standard CV order, with no length limit. For industry_resume aim for two pages, lead with outcomes, and put skills near the top.`,schema:v({name:l,headline:l,contact:l,summary:l,sections:g(v({title:l,entries:g(v({heading:l,subheading:l,dates:l,bullets:g(l)}))})),coverLetter:l}),user:(e,t,a,s)=>`Master resume:
+<resume>
+${e}
+</resume>
+
+Job: ${t.title} at ${t.company} (${t.location})
+
+Analysis of the listing:
+<analysis>
+${JSON.stringify(a,null,2)}
+</analysis>
+${s.notes?`
+Her instructions for this application:
+${s.notes}
+`:""}
+Produce the tailored document in ${a.documentStyle} style. For list-like sections (skills, publications) use entries with an empty heading and the items as bullets. ${s.coverLetter?"Also write coverLetter: a letter of at most 350 words addressed to the employer, using only facts from the resume, in plain paragraphs.":"Set coverLetter to an empty string."}`},reviewer:{system:"You audit a tailored resume against the master resume it was built from. Your job is to catch any claim in the tailored version that the master resume does not support, and to report how well the tailored version covers the job requirements. Be strict: a skill, number or responsibility that only appears in the tailored version is unsupported.",schema:v({matchScore:{type:"integer"},unsupportedClaims:g(v({claim:l,reason:l})),coveredRequirements:g(l),gaps:g(l),suggestions:g(l)}),user:(e,t,a)=>`Master resume:
+<resume>
+${e}
+</resume>
+
+Tailored version:
+<tailored>
+${JSON.stringify(t,null,2)}
+</tailored>
+
+Job requirements:
+<analysis>
+${JSON.stringify(a,null,2)}
+</analysis>
+
+matchScore is 0-100 for how well her real background fits the must-have requirements. gaps are requirements she does not meet on paper. suggestions are things she could truthfully add if they apply to her (phrase each as a question to her).`}};var i=(e="")=>String(e).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");function z(e){let t=[`# ${e.name}`,[e.headline,e.contact].filter(Boolean).join(`  
+`),""];e.summary&&t.push("## Summary",e.summary,"");for(let a of e.sections||[]){t.push(`## ${a.title}`);for(let s of a.entries||[]){let r=[s.heading,s.subheading].filter(Boolean).join(", ");r&&t.push(`**${r}**${s.dates?` (${s.dates})`:""}`);for(let c of s.bullets||[])t.push(`- ${c}`);t.push("")}}return t.join(`
+`).replace(/\n{3,}/g,`
+
+`).trim()+`
+`}var W=`
+  body{font-family:Georgia,'Times New Roman',serif;color:#111;max-width:780px;margin:24px auto;padding:0 24px;font-size:11pt;line-height:1.35}
+  h1{font-size:20pt;margin:0 0 2px}
+  .headline{font-size:11pt;color:#333}
+  .contact{font-size:9.5pt;color:#444;margin-bottom:10px}
+  h2{font-size:11pt;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #999;margin:14px 0 6px;padding-bottom:2px}
+  .entry{margin-bottom:8px;page-break-inside:avoid}
+  .row{display:flex;justify-content:space-between;gap:12px}
+  .heading{font-weight:bold}
+  .dates{white-space:nowrap;color:#333}
+  ul{margin:3px 0 0 18px;padding:0}
+  li{margin-bottom:2px}
+  @media print{body{margin:0;max-width:none;padding:0}@page{margin:16mm}}
+`;function I(e,{standalone:t=!0}={}){let a=[`<h1>${i(e.name)}</h1>`,e.headline?`<div class="headline">${i(e.headline)}</div>`:"",e.contact?`<div class="contact">${i(e.contact)}</div>`:"",e.summary?`<h2>Summary</h2><p>${i(e.summary)}</p>`:"",...(e.sections||[]).map(s=>`<h2>${i(s.title)}</h2>`+(s.entries||[]).map(r=>{let c=[r.heading,r.subheading].filter(Boolean).map(i).join(", ");return`<div class="entry">${c||r.dates?`<div class="row"><span class="heading">${c}</span><span class="dates">${i(r.dates||"")}</span></div>`:""}`+((r.bullets||[]).length?`<ul>${r.bullets.map(h=>`<li>${i(h)}</li>`).join("")}</ul>`:"")+"</div>"}).join(""))].join(`
+`);return t?`<!doctype html><html><head><meta charset="utf-8"><title>${i(e.name)} - Resume</title><style>${W}</style></head><body>${a}</body></html>`:a}var n=e=>document.querySelector(e),A=e=>[...document.querySelectorAll(e)],u={cat:"university",filter:"all",query:"",target:null},o={jobs:[],captured:[],jobState:{},tailored:{},descriptions:{},resume:"",profile:D,status:null},k,S,E,P,C=e=>{n("#notice").hidden=!e,n("#notice").textContent=e||""};function q(e){for(let t of A(".tabs button"))t.setAttribute("aria-selected",String(t.dataset.tab===e));for(let t of A("main > section"))t.hidden=t.id!==`tab-${e}`;scrollTo(0,0)}for(let e of A(".tabs button"))e.onclick=()=>q(e.dataset.tab);var J=()=>[...o.captured,...o.jobs],O=e=>o.jobState[e.id],M=e=>e==="saved"?J().filter(t=>["saved","applied"].includes(O(t))):o.jobs.filter(t=>t.category===e&&O(t)!=="hidden");function V(e){if(!e)return"";let t=Math.floor((Date.now()-new Date(e).getTime())/864e5);return t<=0?"today":t===1?"yesterday":t<31?`${t} days ago`:new Date(e).toLocaleDateString()}function w(){for(let s of A("#categories button"))s.setAttribute("aria-pressed",String(s.dataset.cat===u.cat)),s.querySelector(".count").textContent=`(${M(s.dataset.cat).length})`;let e=u.cat==="university"?Object.entries(_).map(([s,r])=>[s,r.label]):u.cat==="industry"?Object.entries(T).map(([s,r])=>[s,r.label]):[["saved","Shortlisted"],["applied","Applied"]];n("#filters").innerHTML=[["all","All"],...e].map(([s,r])=>`<button data-filter="${s}" aria-pressed="${u.filter===s}">${i(r)}</button>`).join("");let t=u.query.toLowerCase(),a=M(u.cat).filter(s=>u.filter!=="all"&&(u.cat==="university"?s.market:u.cat==="industry"?s.sector:O(s))!==u.filter?!1:!t||`${s.title} ${s.company} ${s.location} ${s.description||""} ${s.feed||""}`.toLowerCase().includes(t));n("#job-list").innerHTML=a.length?a.slice(0,200).map(X).join(""):`<div class="empty">${Z()}</div>`}function Z(){return u.cat==="saved"?"Nothing saved yet. Shortlist a listing, or paste a job from LinkedIn, Indeed or a careers page below.":u.cat==="industry"||u.filter==="SG"||u.filter==="EMEA"?"No listings collected for this group yet. Claude adds them when it next collects listings.":"No listings match this filter."}function X(e){let t=O(e),a=[t==="applied"?'<span class="tag state">Applied</span>':"",e.category==="university"?`<span class="tag">${i(_[e.market]?.label||e.market||"")}</span>`:"",e.category==="industry"?`<span class="tag">${i(T[e.sector]?.label||"")}</span>`:"",e.feed?`<span class="tag">${i(e.feed)}</span>`:"",e.score?`<span class="tag ${e.score>=50?"good":""}">Match ${e.score}</span>`:"",o.tailored[e.id]?'<span class="tag good">Resume ready</span>':"",`<span class="tag">${i(e.source||"added by you")}</span>`].join(""),s=e.url?`<a href="${i(e.url)}" target="_blank" rel="noopener">${i(e.title)}</a>`:i(e.title);return`<article class="card job" data-id="${i(e.id)}">
+    <h3>${s}</h3>
+    <div class="meta">${i([e.company,e.location,V(e.postedAt||e.firstSeen)].filter(Boolean).join(" \xB7 "))}</div>
+    <div class="tags">${a}</div>
+    <div class="actions">
+      <button data-act="tailor" class="primary">${o.tailored[e.id]?"Open resume":"Tailor resume"}</button>
+      ${t==="saved"||t==="applied"?'<button data-act="unsave">Remove</button>':'<button data-act="saved">Shortlist</button>'}
+      ${t==="applied"?"":'<button data-act="applied">Mark applied</button>'}
+      ${t||e.category==="captured"?"":'<button data-act="hidden">Hide</button>'}
+    </div>
+  </article>`}n("#categories").onclick=e=>{let t=e.target.closest("button");t&&(u.cat=t.dataset.cat,u.filter="all",w())};n("#filters").onclick=e=>{let t=e.target.closest("button");t&&(u.filter=t.dataset.filter,w())};n("#search").oninput=e=>{u.query=e.target.value,w()};n("#job-list").onclick=async e=>{let t=e.target.closest("button[data-act]");if(!t)return;let a=t.closest(".job").dataset.id,s=J().find(c=>c.id===a),r=t.dataset.act;if(r==="tailor")return te(s);r==="unsave"?(delete o.jobState[a],s.category==="captured"&&(o.captured=o.captured.filter(c=>c.id!==a),$(`c_${a}`,null))):o.jobState[a]=r,$("state",{map:o.jobState}),w()};function j(){o.jobs=o.jobs.map(e=>({...e,score:U({title:`${e.title} ${e.feed||""}`,description:e.description||""},o.profile)})).sort((e,t)=>t.score-e.score||String(t.postedAt).localeCompare(String(e.postedAt)))}function ee(){let e=o.status;n("#status").textContent=e?.lastRun?`Listings last collected ${new Date(e.lastRun).toLocaleString()}. ${e.note||""}`:"No listings have been collected yet."}function H(){let e=o.profile;n("#profile-view").innerHTML=[["Fields",e.fieldKeywords],["University roles",e.academicRoles],...Object.entries(T).map(([t,a])=>[`India ${a.label}`,e.sectorQueries?.[t]]),["Skills",e.skills]].filter(([,t])=>t?.length).map(([t,a])=>`<div><strong>${i(t)}:</strong> ${i(a.join(", "))}</div>`).join("")||"Not set yet."}async function $(e,t){if(!S)return C("Sign in to Claude to save your changes.");try{t===null?await S.doc(e).delete():await S.doc(e).set(t)}catch(a){C(`Could not save (${a.code||a.message}). Your change is kept until you close this page.`)}}n("#add-job").onclick=async()=>{let e=n("#add-text").value.trim(),t=n("#add-msg");if(e.length<40)return void(t.textContent="Paste the posting text first.");let a=n("#add-job");a.disabled=!0,t.textContent="Reading the posting...";let s={title:e.split(`
+`)[0].slice(0,120),company:"",location:""};try{E&&(s=await E.json(`From this job posting, reply with only a JSON object {"title": string, "company": string, "location": string}. Use an empty string for anything not stated.
+
+<posting>
+`+e.slice(0,6e3)+`
+</posting>`,{modelTier:"quick"}))}catch{}let r="c"+Date.now().toString(36),c={id:r,category:"captured",source:"added by you",title:String(s.title||"Untitled job").slice(0,200),company:String(s.company||""),location:String(s.location||""),url:/^https?:\/\//.test(n("#add-url").value.trim())?n("#add-url").value.trim():"",description:e.slice(0,2e4),firstSeen:new Date().toISOString()};o.captured.unshift(c),o.jobState[r]="saved",await $(`c_${r}`,c),await $("state",{map:o.jobState}),n("#add-text").value=n("#add-url").value="",t.textContent=`Added "${c.title}".`,a.disabled=!1,u.cat="saved",u.filter="all",w()};var R=(e,t,a)=>{if(!E)throw new Error("Claude is not available in this view. Open the page on claude.ai while signed in.");return E.json(`${e.system}
+
+${t}
+
+Reply with only one JSON object that matches this JSON Schema, with no text before or after it:
+${JSON.stringify(e.schema)}`,{modelTier:a,cache:!1})},F=e=>({not_granted:"Claude was not allowed to run for this page. Allow it in the page permissions and try again.",rate_limited:"Too many requests. Wait a minute and try again.",prompt_too_large:"The resume and job text together are too long. Shorten the job description.",refused:"Claude declined this request.",invalid_json:"Claude returned an answer that could not be read. Try again."})[e?.code]||e?.message||"Something went wrong. Try again.";function te(e){u.target=e,n("#target").classList.remove("muted"),n("#target").innerHTML=`<strong>${i(e.title)}</strong><br><span class="small muted">${i([e.company,e.location].filter(Boolean).join(" \xB7 "))}</span>`+(e.url?`<br><a class="small" href="${i(e.url)}" target="_blank" rel="noopener">Open the posting</a>`:""),n("#builder-form").hidden=!1,n("#job-desc").value=o.descriptions[e.id]??e.description??"",n("#build-msg").textContent=o.resume.trim()?"":"Add your resume in the My resume tab first.",B(o.tailored[e.id]),q("builder")}function B(e){if(n("#result").hidden=!e,!e)return;let t=e.review,a=(s,r)=>r?.length?`<strong>${s}</strong><ul>${r.map(c=>`<li>${i(c)}</li>`).join("")}</ul>`:"";n("#review").innerHTML=`<h3>Fit for this role: ${Number(t.matchScore)||0}/100</h3>`+(t.unsupportedClaims?.length?`<div class="warn"><strong>Check before sending.</strong> The reviewer could not find these in your master resume:<ul>${t.unsupportedClaims.map(s=>`<li>${i(s.claim)} <span class="small">(${i(s.reason)})</span></li>`).join("")}</ul></div>`:'<p class="small">Every claim was found in your master resume.</p>')+a("Requirements not shown in your resume",t.gaps)+a("Add these to your master resume if they apply",t.suggestions)+(e.analysis.applicationNotes?`<strong>The listing also asks for</strong><p class="small">${i(e.analysis.applicationNotes)}</p>`:""),n("#preview").innerHTML=I(e.resume,{standalone:!1}),n("#letter-wrap").hidden=!e.resume.coverLetter,n("#letter").value=e.resume.coverLetter||""}n("#build").onclick=async()=>{let e=u.target,t=n("#build-msg");if(!o.resume.trim())return void(t.textContent="Add your resume in the My resume tab first.");let a=n("#job-desc").value.trim();a!==(e.description||"")&&(o.descriptions[e.id]=a,$(`d_${e.id}`,{text:a}));let s={...e,description:a},r=n("#build");r.disabled=!0,t.textContent="",n("#steps").hidden=!1;let c=["analyst","tailor","reviewer"],h=d=>{for(let m of A("#steps li")){let f=c.indexOf(m.dataset.step),b=c.indexOf(d);m.className=f<b?"done":f===b?"active":""}};try{let d={coverLetter:n("#cover-letter").checked,notes:n("#notes").value.trim()};h("analyst");let m=await R(y.analyst,y.analyst.user(s),"default");h("tailor");let f=await R(y.tailor,y.tailor.user(o.resume,s,m,d),"complex");h("reviewer");let b=await R(y.reviewer,y.reviewer.user(o.resume,f,m),"default"),p={analysis:m,resume:f,review:b,builtAt:new Date().toISOString()};o.tailored[e.id]=p,$(`t_${e.id}`,p),B(p),w()}catch(d){t.textContent=F(d)}n("#steps").hidden=!0,r.disabled=!1};var N=()=>o.tailored[u.target?.id]?.resume,K=e=>`${N().name} - ${u.target.company||u.target.title}`.replace(/[^\w .-]+/g,"").trim().slice(0,80)+e;async function G(e,t,a){let s=a.textContent;try{if(!P)throw{code:"unavailable"};await P.save({filename:e,data:t})}catch(r){r?.code!=="declined"&&(a.textContent="Downloads are not available here",setTimeout(()=>a.textContent=s,2500))}}async function Y(e){let t=d=>i(d).replace(/&quot;/g,'"'),a=(d,m,f)=>`<w:r><w:rPr>${m?"<w:b/>":""}<w:sz w:val="${f}"/></w:rPr><w:t xml:space="preserve">${t(d)}</w:t></w:r>`,s=(d,m="")=>`<w:p><w:pPr><w:spacing w:after="60"/>${m}</w:pPr>${d}</w:p>`,r=[s(a(e.name,!0,36))];e.headline&&r.push(s(a(e.headline,!1,22))),e.contact&&r.push(s(a(e.contact,!1,19)));let c=d=>s(a(d.toUpperCase(),!0,21),'<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="888888"/></w:pBdr><w:spacing w:before="200" w:after="80"/>');e.summary&&r.push(c("Summary"),s(a(e.summary,!1,21)));for(let d of e.sections||[]){r.push(c(d.title));for(let m of d.entries||[]){let f=[m.heading,m.subheading].filter(Boolean).join(", ");(f||m.dates)&&r.push(s(a(f,!0,21)+(m.dates?`<w:r><w:tab/></w:r>${a(m.dates,!1,21)}`:""),'<w:tabs><w:tab w:val="right" w:pos="9638"/></w:tabs>'));for(let b of m.bullets||[])r.push(s(a("\u2022	"+b,!1,21),'<w:tabs><w:tab w:val="left" w:pos="284"/></w:tabs><w:ind w:left="284" w:hanging="284"/>'))}}let h=new JSZip;return h.file("[Content_Types].xml",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>'),h.file("_rels/.rels",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>'),h.file("word/document.xml",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${r.join("")}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr></w:body></w:document>`),h.generateAsync({type:"blob"})}window.__buildDocx=Y;n("#dl-docx").onclick=async e=>G(K(".docx"),await Y(N()),e.target);n("#dl-html").onclick=e=>G(K(".html"),I(N()),e.target);n("#copy-md").onclick=async e=>{let t=z(N());try{await navigator.clipboard.writeText(t),e.target.textContent="Copied"}catch{e.target.textContent="Copy is blocked here; use a download"}setTimeout(()=>e.target.textContent="Copy as Markdown",2e3)};n("#save-resume").onclick=async()=>{o.resume=n("#resume-text").value,await $("resume",{text:o.resume}),n("#resume-msg").textContent=S?"Resume saved.":""};n("#extract-profile").onclick=async e=>{let t=n("#resume-msg");if(o.resume=n("#resume-text").value,!o.resume.trim())return void(t.textContent="Paste the resume first.");e.target.disabled=!0,t.textContent="Reading the resume...";try{await $("resume",{text:o.resume});let a=await R(y.profile,y.profile.user(o.resume),"default");o.profile={...o.profile,...a},await k?.doc("meta/profile").set(o.profile).catch(()=>{}),j(),H(),w(),t.textContent="Search keywords updated. Listings are re-ranked, and the next collection will use them."}catch(a){t.textContent=F(a)}e.target.disabled=!1};(async function(){w();let t=d=>window.claude?.use?window.claude.use(d):Promise.resolve(null),[a,s,r,c]=await Promise.all(["db","user","sample","downloads"].map(t));if(k=a,E=r,P=c,!k)return n("#status").textContent="",C("Listings and saved data are unavailable in this view. Open this page on claude.ai while signed in.");let h=setTimeout(()=>C("Listings are taking a long time to load. Check the connection and reopen the page."),1e4);try{let d=await s?.id();d&&(S=k.collection(`data/users/${d}`));let[m,f,b]=await Promise.all([k.collection("jobs").limit(1e3).get(),k.collection("meta").get(),S?S.limit(1e3).get():{docs:[]}]);clearTimeout(h),o.jobs=m.docs.map(p=>({id:p.id,...p.data()}));for(let p of f.docs)p.id==="status"&&(o.status=p.data()),p.id==="profile"&&(o.profile={...D,...p.data()});for(let p of b.docs){let x=p.data();p.id==="resume"?o.resume=x.text||"":p.id==="state"?o.jobState=x.map||{}:p.id.startsWith("t_")?o.tailored[p.id.slice(2)]=x:p.id.startsWith("d_")?o.descriptions[p.id.slice(2)]=x.text||"":p.id.startsWith("c_")&&o.captured.push(x)}o.captured.sort((p,x)=>String(x.firstSeen).localeCompare(String(p.firstSeen)))}catch(d){clearTimeout(h),C(`Could not load data (${d.code||d.message}).`)}n("#resume-text").value=o.resume,j(),ee(),H(),w()})();})();
+</script>

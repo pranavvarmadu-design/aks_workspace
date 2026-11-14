@@ -94,3 +94,7 @@ extension/  manifest, side panel, service worker (src/ is bundled into dist/)
 ```
 
 After changing anything under `core/` or `extension/src/`, run `npm run build` and reload the extension.
+
+## Hosted version (Claude artifact)
+
+`artifact/` holds a version that runs as a page on claude.ai with no install and no API key: `node artifact/build.mjs` writes `artifact/dist/job-portal.html`. Claude tailors resumes through the page itself; listings are written into the page database by a Claude session.
