@@ -31,3 +31,10 @@ test('cell biology postdocs are no longer dropped', () => {
   const kept = finalise([{ ...base, university: true, title: 'Postdoctoral Research Associate in Plant Cell Biology', url: 'https://x/1' }], DEFAULT_PROFILE);
   assert.equal(kept.length, 1);
 });
+
+test('a post that will not sponsor a visa stays at the bottom despite core skills', () => {
+  const desc = 'Pollination ecology, floral microscopy and HPLC of nectar. ' + 'x '.repeat(120);
+  const noVisa = relevance({ category: 'university', market: 'US', company: 'Iowa State University', location: 'Ames, IA', title: 'Postdoc in Pollination Ecology', description: desc + ' Sponsorship is not available.' }, {}, 40);
+  const plain = relevance({ category: 'university', market: 'US', company: 'Iowa State University', location: 'Ames, IA', title: 'Postdoctoral Research Associate', description: 'Field trials. ' + 'x '.repeat(120) }, {}, 20);
+  assert.ok(noVisa <= 10 && noVisa < plain, `${noVisa} vs ${plain}`);
+});

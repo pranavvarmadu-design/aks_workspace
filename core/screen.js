@@ -137,6 +137,8 @@ export function relevance(job, profile = {}, baseScore = 0) {
   if (isBiotechGenetics(job)) r -= 20;
   // Three or more of her known gaps is normally a skip, however good the field match.
   if (s.blockers.length >= 3) r = Math.min(r, 15);
+  // No visa sponsorship rules the post out for her, however well it matches.
+  if (visa === 'no') r = Math.min(r, 10);
   return Math.max(0, Math.min(100, Math.round(r)));
 }
 
