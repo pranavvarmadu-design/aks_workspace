@@ -40,6 +40,9 @@ const job = (source, j) => ({
   university: !!j.university,
   sector: j.sector || null,
   salary: j.salary || '',
+  ...(j.feed ? { feed: j.feed } : {}),
+  ...(j.broadFeed ? { broadFeed: true } : {}),
+  ...(j.closes ? { closes: j.closes } : {}),
 });
 
 async function getJson(fetchFn, url, init) {

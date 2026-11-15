@@ -76,14 +76,15 @@ export const DEFAULT_PROFILE = {
 export const DEFAULT_SOURCES = {
   adzuna: { enabled: true, maxDaysOld: 30, resultsPerPage: 50 },
   // HigherEdJobs publishes per-category RSS feeds: https://www.higheredjobs.com/rss/
+  // broad: the feed covers every subject, so only titles in her field or naming a core skill are kept.
   rss: [
     { name: 'HigherEdJobs: Plant and Soil Science', url: 'https://www.higheredjobs.com/rss/categoryFeed.cfm?catID=49', market: 'US', university: true },
-    { name: 'HigherEdJobs: Biology', url: 'https://www.higheredjobs.com/rss/categoryFeed.cfm?catID=100', market: 'US', university: true },
+    { name: 'HigherEdJobs: Biology', url: 'https://www.higheredjobs.com/rss/categoryFeed.cfm?catID=100', market: 'US', university: true, broad: true },
     { name: 'HigherEdJobs: Horticulture', url: 'https://www.higheredjobs.com/rss/categoryFeed.cfm?catID=123', market: 'US', university: true },
     { name: 'HigherEdJobs: Ecology, Environmental Science and Forestry', url: 'https://www.higheredjobs.com/rss/categoryFeed.cfm?catID=54', market: 'US', university: true },
     { name: 'HigherEdJobs: Entomology', url: 'https://www.higheredjobs.com/rss/categoryFeed.cfm?catID=52', market: 'US', university: true },
     { name: 'HigherEdJobs: Food Science', url: 'https://www.higheredjobs.com/rss/categoryFeed.cfm?catID=53', market: 'US', university: true },
-    { name: 'HigherEdJobs: Laboratory and Research', url: 'https://www.higheredjobs.com/rss/categoryFeed.cfm?catID=150', market: 'US', university: true },
+    { name: 'HigherEdJobs: Laboratory and Research', url: 'https://www.higheredjobs.com/rss/categoryFeed.cfm?catID=150', market: 'US', university: true, broad: true },
   ],
   // jobs.ac.uk: UK universities and institutes (Oxford, Cambridge, John Innes, Kew), some Europe.
   jobsAcUk: [

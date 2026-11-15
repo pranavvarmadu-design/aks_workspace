@@ -1,5 +1,6 @@
 // Runs every enabled collector, then classifies, scores and de-duplicates.
 
+import { coreSkillMatches } from './screen.js';
 import { SECTORS, UNIVERSITY_RE } from './config.js';
 import { isIndia } from './screen.js';
 import {
@@ -85,7 +86,7 @@ export async function collectAll({ fetchFn = fetch, profile, sources, keys = {},
   }
 
   for (const feed of sources.rss || [])
-    raw.push(...(await run(feed.name, () => rssCollect(fetchFn, feed))).map((j) => normaliseJob('rss', { ...j, market: j.market || feed.market, university: feed.university, sector: feed.sector })));
+    raw.push(...(await run(feed.name, () => rssCollect(fetchFn, feed))).map((j) => normaliseJob('rss', { ...j, market: j.market || feed.market, university: feed.university, sector: feed.sector, feed: feed.name.replace(/^HigherEdJobs:\s*/, ''), broadFeed: feed.broad })));
 
   for (const kw of sources.jobsAcUk || []) {
     raw.push(...(await run(`jobs.ac.uk: ${kw}`, () => jobsAcUkCollect(fetchFn, kw))).map((j) => normaliseJob('jobs.ac.uk', j)));
@@ -149,6 +150,8 @@ export function finalise(raw, profile) {
     // A title that names her field is never dropped ('Biosystems Engineering & Soil Science' stays).
     const inField = (profile.relevanceTerms || []).some((t) => startsWord(j.title, t));
     if (!inField && exclude.some((x) => startsWord(j.title, x))) continue;
+    // All-subject feeds: keep only titles in her field or naming one of her core skills.
+    if (j.broadFeed && !inField && !coreSkillMatches({ title: j.title }).some((c) => c.inTitle)) continue;
     if ((profile.alwaysExcludeTerms || []).some((x) => startsWord(j.title, x))) continue;
     if (j.category === 'industry' && (profile.industryExcludeTerms || []).some((x) => startsWord(j.title, x))) continue;
     // University listings must name one of her target roles (postdoc by default).
